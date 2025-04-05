@@ -1,5 +1,6 @@
 import { Switch, Route } from "wouter";
 import { ProtectedRoute } from "./lib/protected-route";
+import { useAuth } from "./hooks/use-auth";
 
 // Pages
 import LandingPage from "@/pages/landing-page";
@@ -20,6 +21,8 @@ import NotFound from "@/pages/not-found";
 // import PromptArsenal from "@/pages/marketing-tools/prompt-arsenal";
 
 function Router() {
+  // We'll get the auth data in child components instead of here, since that's causing issues
+
   return (
     <Switch>
       {/* Public routes */}
