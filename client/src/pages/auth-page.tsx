@@ -76,26 +76,42 @@ export default function AuthPage() {
     },
   });
 
-  // Mock auth functions for now
-  const loginMutation = {
-    mutate: (values: LoginFormValues) => {
+  // Real auth functions using API directly since we're bypassing the hook
+  const loginMutation = useMutation({
+    mutationFn: async (credentials: LoginFormValues) => {
+      const res = await apiRequest("POST", "/api/login", credentials);
+      return await res.json();
+    },
+    onSuccess: (user) => {
+      queryClient.setQueryData(["/api/user"], user);
+      navigate("/dashboard");
+    },
+    onError: (error: Error) => {
       toast({
-        title: "Login functionality",
-        description: "This is being fixed. Please try again later.",
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive",
       });
     },
-    isPending: false,
-  };
+  });
   
-  const registerMutation = {
-    mutate: (values: any) => {
+  const registerMutation = useMutation({
+    mutationFn: async (values: any) => {
+      const res = await apiRequest("POST", "/api/register", values);
+      return await res.json();
+    },
+    onSuccess: (user) => {
+      queryClient.setQueryData(["/api/user"], user);
+      navigate("/dashboard");
+    },
+    onError: (error: Error) => {
       toast({
-        title: "Registration functionality",
-        description: "This is being fixed. Please try again later.",
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
       });
     },
-    isPending: false,
-  };
+  });
 
   // Handle login submission
   function onLoginSubmit(values: LoginFormValues) {
