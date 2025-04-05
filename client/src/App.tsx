@@ -1,6 +1,5 @@
 import { Switch, Route } from "wouter";
 import { ProtectedRoute } from "./lib/protected-route";
-import { useAuth } from "./hooks/use-auth";
 
 // Pages
 import LandingPage from "@/pages/landing-page";
@@ -21,8 +20,6 @@ import NotFound from "@/pages/not-found";
 // import PromptArsenal from "@/pages/marketing-tools/prompt-arsenal";
 
 function Router() {
-  // We'll get the auth data in child components instead of here, since that's causing issues
-
   return (
     <Switch>
       {/* Public routes */}
@@ -30,19 +27,41 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       
       {/* Protected routes */}
-      <ProtectedRoute path="/dashboard" component={DashboardPage} />
-      <ProtectedRoute path="/content-calendar" component={ContentCalendarPage} />
-      <ProtectedRoute path="/content-studio" component={ContentStudioPage} />
-      <ProtectedRoute path="/ai-generator" component={AIGeneratorPage} />
-      <ProtectedRoute path="/analytics" component={AnalyticsPage} />
-      <ProtectedRoute path="/settings" component={SettingsPage} />
-      <ProtectedRoute path="/subscribe" component={SubscribePage} />
+      <Route path="/dashboard">
+        <DashboardPage />
+      </Route>
+      <Route path="/content-calendar">
+        <ContentCalendarPage />
+      </Route>
+      <Route path="/content-studio">
+        <ContentStudioPage />
+      </Route>
+      <Route path="/ai-generator">
+        <AIGeneratorPage />
+      </Route>
+      <Route path="/analytics">
+        <AnalyticsPage />
+      </Route>
+      <Route path="/settings">
+        <SettingsPage />
+      </Route>
+      <Route path="/subscribe">
+        <SubscribePage />
+      </Route>
       
       {/* Marketing Tools - Commented out until implemented */}
-      {/* <ProtectedRoute path="/marketing-tools/conversion-tactics" component={ConversionTactics} />
-      <ProtectedRoute path="/marketing-tools/growth-engines" component={GrowthEngines} />
-      <ProtectedRoute path="/marketing-tools/automation" component={Automation} />
-      <ProtectedRoute path="/marketing-tools/prompt-arsenal" component={PromptArsenal} /> */}
+      {/* <Route path="/marketing-tools/conversion-tactics">
+        <ConversionTactics />
+      </Route>
+      <Route path="/marketing-tools/growth-engines">
+        <GrowthEngines />
+      </Route>
+      <Route path="/marketing-tools/automation">
+        <Automation />
+      </Route>
+      <Route path="/marketing-tools/prompt-arsenal">
+        <PromptArsenal />
+      </Route> */}
       
       {/* Fallback 404 */}
       <Route component={NotFound} />

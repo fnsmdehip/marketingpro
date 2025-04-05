@@ -4,7 +4,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
+// Temporarily commented out until auth issues are fixed
+// import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 
@@ -53,16 +54,6 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  
-  // Check if user is already logged in
-  const { user, isLoading } = useAuth();
-  
-  // Redirect if already logged in
-  useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
-  }, [user, navigate]);
 
   // Form for login
   const loginForm = useForm<LoginFormValues>({
@@ -85,8 +76,26 @@ export default function AuthPage() {
     },
   });
 
-  // Use auth context for login and registration
-  const { loginMutation, registerMutation } = useAuth();
+  // Mock auth functions for now
+  const loginMutation = {
+    mutate: (values: LoginFormValues) => {
+      toast({
+        title: "Login functionality",
+        description: "This is being fixed. Please try again later.",
+      });
+    },
+    isPending: false,
+  };
+  
+  const registerMutation = {
+    mutate: (values: any) => {
+      toast({
+        title: "Registration functionality",
+        description: "This is being fixed. Please try again later.",
+      });
+    },
+    isPending: false,
+  };
 
   // Handle login submission
   function onLoginSubmit(values: LoginFormValues) {
