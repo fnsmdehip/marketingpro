@@ -1,4 +1,3 @@
-import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +5,12 @@ import { Calendar, Clock, Image, Settings, BarChart2, Zap } from "lucide-react";
 import { Link } from "wouter";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  // Get user info directly from the API
+  const { data: user } = useQuery({
+    queryKey: ["/api/user"],
+  });
   
+  // Dashboard data
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ["/api/dashboard"],
   });
@@ -115,16 +118,18 @@ export default function DashboardPage() {
               </div>
             ) : dashboardData?.aiProviders ? (
               <div className="space-y-3">
-                {dashboardData.aiProviders.slice(0, 3).map((provider: any) => (
+                {(dashboardData?.aiProviders || []).slice(0, 3).map((provider: any) => (
                   <div key={provider.name} className="space-y-1">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">{provider.name}</span>
-                      <span className="text-xs text-muted-foreground">{provider.usage.daily}/{provider.dailyLimit}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {provider.usage?.daily || 0}/{provider.dailyLimit || 100}
+                      </span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-primary" 
-                        style={{ width: `${(provider.usage.daily / provider.dailyLimit) * 100}%` }}
+                        style={{ width: `${((provider.usage?.daily || 0) / (provider.dailyLimit || 100)) * 100}%` }}
                       />
                     </div>
                   </div>

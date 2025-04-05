@@ -1,8 +1,5 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
-import { useContentScheduler } from "@/hooks/use-content-scheduler";
-import { useAIProviders } from "@/hooks/use-ai-providers";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -16,23 +13,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ModelSelector } from "@/components/ai/model-selector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Copy, PlusCircle, Send, CheckCircle2, Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Loader2, Copy, PlusCircle, Send, CheckCircle2, Download, Layout } from "lucide-react";
+import { Link, useLocation } from "wouter";
 
 type GeneratorType = "text" | "image" | "speech" | "video";
 
 export default function AIGeneratorPage() {
-  const { openScheduler, updateSchedulerContent } = useContentScheduler();
-  const { 
-    providers, 
-    generateText, 
-    generateImage, 
-    generateSpeech,
-    isGeneratingText,
-    isGeneratingImage,
-    isGeneratingSpeech
-  } = useAIProviders();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  
+  // Get AI providers data
+  const { data: providers = [] } = useQuery({
+    queryKey: ["/api/ai/providers"],
+  });
   
   // State for active tab
   const [activeTab, setActiveTab] = useState<GeneratorType>("text");
@@ -62,59 +59,129 @@ export default function AIGeneratorPage() {
   const [speechResult, setSpeechResult] = useState<string | null>(null);
   const [videoResult, setVideoResult] = useState<string | null>(null);
   
+  // Text generation mutation
+  const generateTextMutation = useMutation({
+    mutationFn: async (params: { prompt: string, model: string, temperature: number }) => {
+      const res = await apiRequest("POST", "/api/ai/generate/text", params);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      setTextResult(typeof data.result === 'string' ? data.result : data.result.join(''));
+      toast({
+        title: "Text generated successfully",
+        description: "You can now copy or use this text.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error generating text",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Image generation mutation
+  const generateImageMutation = useMutation({
+    mutationFn: async (params: { prompt: string, model: string, width?: number, height?: number, style?: string }) => {
+      const res = await apiRequest("POST", "/api/ai/generate/image", params);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      setImageResult(typeof data.result === 'string' ? data.result : data.result[0]);
+      toast({
+        title: "Image generated successfully",
+        description: "Your image is ready to use.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error generating image",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Speech generation mutation
+  const generateSpeechMutation = useMutation({
+    mutationFn: async (params: { text: string, voice: string, model?: string }) => {
+      const res = await apiRequest("POST", "/api/ai/generate/speech", params);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      setSpeechResult(typeof data.result === 'string' ? data.result : data.result[0]);
+      toast({
+        title: "Speech generated successfully",
+        description: "Your audio is ready to play.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error generating speech",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Function to handle text generation
-  const handleGenerateText = async () => {
+  const handleGenerateText = () => {
     if (!textPrompt) {
-      alert("Please enter a prompt");
+      toast({
+        title: "Prompt required",
+        description: "Please enter a prompt to generate text.",
+        variant: "destructive",
+      });
       return;
     }
     
     const finalPrompt = createPromptWithPurpose(textPrompt, textPurpose);
     
-    const result = await generateText({
+    generateTextMutation.mutate({
       prompt: finalPrompt,
       model: textModel,
       temperature: temperature,
     });
-    
-    if (result.success && result.result) {
-      setTextResult(typeof result.result === 'string' ? result.result : result.result.join(''));
-    }
   };
   
   // Function to handle image generation
-  const handleGenerateImage = async () => {
+  const handleGenerateImage = () => {
     if (!imagePrompt) {
-      alert("Please enter a prompt");
+      toast({
+        title: "Prompt required",
+        description: "Please enter a prompt to generate an image.",
+        variant: "destructive",
+      });
       return;
     }
     
-    const result = await generateImage({
+    const [width, height] = imageSize.split('x').map(Number);
+    
+    generateImageMutation.mutate({
       prompt: imagePrompt,
       model: imageModel,
-      size: imageSize,
+      width,
+      height,
     });
-    
-    if (result.success && result.result) {
-      setImageResult(typeof result.result === 'string' ? result.result : result.result[0]);
-    }
   };
   
   // Function to handle speech generation
-  const handleGenerateSpeech = async () => {
+  const handleGenerateSpeech = () => {
     if (!speechText) {
-      alert("Please enter text");
+      toast({
+        title: "Text required",
+        description: "Please enter text to convert to speech.",
+        variant: "destructive",
+      });
       return;
     }
     
-    const result = await generateSpeech({
+    generateSpeechMutation.mutate({
       text: speechText,
       voice: speechVoice,
+      model: speechModel,
     });
-    
-    if (result.success && result.result) {
-      setSpeechResult(typeof result.result === 'string' ? result.result : result.result[0]);
-    }
   };
   
   // Function to create a prompt with purpose context
