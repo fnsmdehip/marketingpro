@@ -218,7 +218,7 @@ export default function AIGeneratorPage() {
   };
   
   return (
-    <DashboardLayout title="AI Generator">
+    <div className="container mx-auto py-8 px-4">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -895,6 +895,6 @@ export default function AIGeneratorPage() {
           </TabsContent>
         </Tabs>
       </motion.div>
-    </DashboardLayout>
+    </div>
   );
 }
