@@ -71,15 +71,17 @@ export function UGCGenerator() {
       return;
     }
     
-    const result = await generateImage({
-      prompt: imagePrompt,
-      model: imageModel,
-      size: imageSize,
-      style: imageStyle
-    });
-    
-    if (result.success && result.result) {
-      setImageResult(typeof result.result === 'string' ? result.result : result.result[0]);
+    try {
+      const url = await generateImage({
+        prompt: imagePrompt,
+        model: imageModel,
+        size: imageSize,
+        style: imageStyle
+      });
+      
+      setImageResult(url);
+    } catch (error) {
+      console.error("Failed to generate image:", error);
     }
   };
   
@@ -90,15 +92,17 @@ export function UGCGenerator() {
       return;
     }
     
-    const result = await generateVideo({
-      prompt: videoPrompt,
-      model: videoModel,
-      duration: Number(videoDuration),
-      style: videoStyle
-    });
-    
-    if (result.success && result.result) {
-      setVideoResult(typeof result.result === 'string' ? result.result : result.result[0]);
+    try {
+      const url = await generateVideo({
+        prompt: videoPrompt,
+        model: videoModel,
+        duration: videoDuration,
+        style: videoStyle
+      });
+      
+      setVideoResult(url);
+    } catch (error) {
+      console.error("Failed to generate video:", error);
     }
   };
   
@@ -109,13 +113,16 @@ export function UGCGenerator() {
       return;
     }
     
-    const result = await generateSpeech({
-      text: speechText,
-      voice: speechVoice
-    });
-    
-    if (result.success && result.result) {
-      setSpeechResult(typeof result.result === 'string' ? result.result : result.result[0]);
+    try {
+      const url = await generateSpeech({
+        text: speechText,
+        model: speechModel,
+        voice: speechVoice
+      });
+      
+      setSpeechResult(url);
+    } catch (error) {
+      console.error("Failed to generate speech:", error);
     }
   };
   

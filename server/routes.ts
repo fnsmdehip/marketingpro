@@ -7,6 +7,7 @@ import { aiManager } from "./ai";
 import { z } from "zod";
 import { insertContentSchema, insertPlatformSchema } from "@shared/schema";
 import socialRoutes from "./social/routes";
+import ugcGeneratorRoutes from "./ai/ugc-generator";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
@@ -17,6 +18,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup social media routes
   app.use('/api/social', socialRoutes);
+  
+  // Setup UGC generator routes
+  app.use('/api/ai', ugcGeneratorRoutes);
   
   // Initialize AI manager
   await aiManager.initialize();

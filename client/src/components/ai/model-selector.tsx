@@ -36,7 +36,7 @@ export function ModelSelector({
   onTemperatureChange,
   disabled = false
 }: ModelSelectorProps) {
-  const { providers, isLoadingProviders } = useAIProviders();
+  const { providers, isLoading: isLoadingProviders } = useAIProviders();
   const [showTemperature, setShowTemperature] = useState(false);
   
   // Models for each type
