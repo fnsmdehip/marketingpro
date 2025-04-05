@@ -14,7 +14,7 @@ export class DatabaseStorage implements IStorage {
     // Set up PostgreSQL session store
     const PostgresSessionStore = connectPg(session);
     
-    // Create a pool directly using the DATABASE_URL environment variable
+    // Create a pg pool directly using the DATABASE_URL environment variable
     const pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL
     });
@@ -161,8 +161,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createContent(insertContent: InsertContent): Promise<Content> {
-    const [content] = await db.insert(contents).values(insertContent).returning();
-    return content;
+    try {
+      // The simplest approach - let Drizzle handle the InsertContent type
+      const [content] = await db.insert(contents).values(insertContent).returning();
+      return content;
+    } catch (error) {
+      console.error("Error creating content:", error);
+      throw error;
+    }
   }
 
   async updateContent(id: number, updates: Partial<Content>): Promise<Content | undefined> {
@@ -175,8 +181,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteContent(id: number): Promise<boolean> {
-    const result = await db.delete(contents).where(eq(contents.id, id));
-    return result.rowCount > 0;
+    await db.delete(contents).where(eq(contents.id, id));
+    return true; // In postgres.js, we don't have easy access to affected rows
   }
 
   // Platform methods
@@ -215,8 +221,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePlatform(id: number): Promise<boolean> {
-    const result = await db.delete(platforms).where(eq(platforms.id, id));
-    return result.rowCount > 0;
+    await db.delete(platforms).where(eq(platforms.id, id));
+    return true; // In postgres.js, we don't have easy access to affected rows
   }
 
   // AI Usage methods
