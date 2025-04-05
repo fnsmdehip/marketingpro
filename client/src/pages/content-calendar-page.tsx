@@ -1,12 +1,16 @@
-import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 
 export default function ContentCalendarPage() {
-  const { user } = useAuth();
+  // Fetch user data
+  const { data: user } = useQuery({
+    queryKey: ["/api/user"],
+  });
+  
   const [date, setDate] = useState<Date | undefined>(new Date());
 
   return (
