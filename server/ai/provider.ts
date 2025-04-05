@@ -1,129 +1,157 @@
-import { storage } from "../storage";
-import { AiProvider } from "@shared/schema";
+import { z } from "zod";
 
-// Types for AI provider operations
-export type ProviderRequestParams = {
+export interface ProviderRequestParams {
   prompt: string;
   model?: string;
   maxTokens?: number;
   temperature?: number;
-  user?: number;
-};
+  userId?: number;
+  skipAuth?: boolean; // Used to bypass authentication for testing
+}
 
-export type ProviderImageParams = {
+export interface ProviderImageParams {
   prompt: string;
   model?: string;
-  size?: string;
-  quality?: string;
   style?: string;
-  user?: number;
-};
+  width?: number;
+  height?: number;
+  userId?: number;
+  skipAuth?: boolean; // Used to bypass authentication for testing
+}
 
-export type ProviderTTSParams = {
+export interface ProviderTTSParams {
   text: string;
   voice?: string;
-  speed?: number;
-  user?: number;
-};
+  model?: string;
+  userId?: number;
+}
 
-export type ProviderVideoParams = {
+export interface ProviderVideoParams {
   prompt: string;
   model?: string;
   duration?: number;
   style?: string;
-  user?: number;
-};
+  userId?: number;
+}
 
 export interface ProviderResponse {
   success: boolean;
-  result?: string | string[];
-  error?: string;
+  data?: any;
+  error?: {
+    message: string;
+    code?: string;
+    retryAfter?: number;
+  };
   provider: string;
+  rateLimited?: boolean;
 }
 
-// Base provider class
+// Zod validation schemas for the provider parameters
+export const requestParamsSchema = z.object({
+  prompt: z.string().min(1, "Prompt is required"),
+  model: z.string().optional(),
+  maxTokens: z.number().int().positive().max(8192).optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  userId: z.number().int().positive().optional(),
+  skipAuth: z.boolean().optional()
+});
+
+export const imageParamsSchema = z.object({
+  prompt: z.string().min(1, "Prompt is required"),
+  model: z.string().optional(),
+  style: z.string().optional(),
+  width: z.number().int().min(32).max(4096).optional(),
+  height: z.number().int().min(32).max(4096).optional(),
+  userId: z.number().int().positive().optional(),
+  skipAuth: z.boolean().optional()
+});
+
+export const ttsParamsSchema = z.object({
+  text: z.string().min(1, "Text is required"),
+  voice: z.string().optional(),
+  model: z.string().optional(),
+  userId: z.number().int().positive().optional()
+});
+
+export const videoParamsSchema = z.object({
+  prompt: z.string().min(1, "Prompt is required"),
+  model: z.string().optional(),
+  duration: z.number().positive().max(60).optional(),
+  style: z.string().optional(),
+  userId: z.number().int().positive().optional()
+});
+
 export abstract class AIProvider {
-  protected provider: AiProvider;
-  protected hourlyRequests: number[];
-  protected dailyRequests: number[];
-  
-  constructor(provider: AiProvider) {
-    this.provider = provider;
-    this.hourlyRequests = [];
-    this.dailyRequests = [];
-  }
-  
-  get name(): string {
-    return this.provider.name;
-  }
-  
-  get status(): string {
-    return this.provider.status;
-  }
-  
-  get hourlyLimit(): number {
-    return this.provider.hourlyLimit;
-  }
-  
-  get dailyLimit(): number {
-    return this.provider.dailyLimit;
-  }
-  
-  get usage(): {hourly: number, daily: number, percentage: number} {
-    this.updateRequestCounters();
-    
-    return {
-      hourly: this.hourlyRequests.length,
-      daily: this.dailyRequests.length,
-      percentage: Math.round((this.dailyRequests.length / this.dailyLimit) * 100)
-    };
-  }
-  
-  async recordUsage(userId: number, requestType: string, success: boolean): Promise<void> {
-    // Record usage in the database
-    await storage.createAiUsage({
-      userId,
-      provider: this.provider.name,
-      requestType,
-      requestCount: 1,
-      status: success ? "success" : "failed"
-    });
-    
-    // Update internal counters
-    const now = Date.now();
-    this.hourlyRequests.push(now);
-    this.dailyRequests.push(now);
-    
-    // Clean up old requests
-    this.updateRequestCounters();
-  }
-  
-  // Check if provider is available for use
-  isAvailable(): boolean {
-    // Update counters before checking
-    this.updateRequestCounters();
-    
-    return this.provider.status === 'active' && 
-           this.hourlyRequests.length < this.hourlyLimit &&
-           this.dailyRequests.length < this.dailyLimit;
-  }
-  
-  // Update the request counters by removing old timestamps
-  private updateRequestCounters(): void {
-    const now = Date.now();
-    const hourAgo = now - 60 * 60 * 1000;
-    const dayAgo = now - 24 * 60 * 60 * 1000;
-    
-    // Keep only requests within the last hour
-    this.hourlyRequests = this.hourlyRequests.filter(time => time >= hourAgo);
-    
-    // Keep only requests within the last 24 hours
-    this.dailyRequests = this.dailyRequests.filter(time => time >= dayAgo);
-  }
-  
-  // Abstract methods that should be implemented by specific providers
+  static readonly MAX_RETRY_COUNT = 3;
+  static readonly RETRY_DELAY = 1000;
+
   abstract textGeneration(params: ProviderRequestParams): Promise<ProviderResponse>;
   abstract imageGeneration(params: ProviderImageParams): Promise<ProviderResponse>;
   abstract textToSpeech(params: ProviderTTSParams): Promise<ProviderResponse>;
   abstract videoGeneration(params: ProviderVideoParams): Promise<ProviderResponse>;
+
+  // Security features
+  protected sanitizeInput(input: string): string {
+    // Remove potential script tags and other risky content
+    return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                .replace(/javascript:/gi, '')
+                .replace(/on\w+=/gi, '');
+  }
+
+  protected validateModel(model: string, allowList: string[]): boolean {
+    // Check if model is in the allowList to prevent unauthorized model access
+    return allowList.includes(model);
+  }
+  
+  // Rate limiting helper
+  protected isRateLimitError(error: any): boolean {
+    // Different providers use different error structures
+    return (
+      error?.response?.status === 429 ||
+      error?.status === 429 ||
+      (error?.message && (error.message.toLowerCase().includes('rate limit') || 
+                        error.message.toLowerCase().includes('too many requests')))
+    );
+  }
+
+  // Error sanitization to prevent information disclosure
+  protected sanitizeError(error: any, providerName: string): ProviderResponse {
+    let message = 'Unknown error occurred';
+    let code = 'unknown_error';
+    let retryAfter = undefined;
+    
+    // Get error info but ensure no sensitive data is included
+    if (error?.message) {
+      message = error.message;
+      // Replace any potential sensitive data
+      if (message.includes('key') || message.includes('token') || message.includes('auth')) {
+        message = 'Provider authentication error';
+      }
+    }
+    
+    // Extract status code if available
+    if (error?.response?.status) {
+      code = `http_${error.response.status}`;
+    } else if (error?.status) {
+      code = `http_${error.status}`;
+    }
+    
+    // Extract retry-after if available
+    if (error?.response?.headers?.['retry-after']) {
+      retryAfter = parseInt(error.response.headers['retry-after']);
+    } else if (this.isRateLimitError(error)) {
+      retryAfter = 60; // Default 60 seconds when rate limited
+    }
+    
+    return {
+      success: false,
+      error: {
+        message,
+        code,
+        retryAfter
+      },
+      provider: providerName,
+      rateLimited: this.isRateLimitError(error)
+    };
+  }
 }

@@ -8,20 +8,23 @@ import {
   ProviderVideoParams
 } from "./provider";
 
-export class GeminiProvider extends AIProvider {
+export class DeepSeekProvider extends AIProvider {
   private apiKey: string;
-  private baseUrl: string = "https://generativelanguage.googleapis.com/v1beta";
+  private baseUrl: string = "https://api-inference.huggingface.co/models";
   private consecutiveFailures: number = 0;
   private circuitOpen: boolean = false;
   private lastErrorTime: number = 0;
   private circuitResetTimeout: number = 300000; // 5 minutes
   
-  // Available models (2.5 is the latest and best)
+  // DeepSeek models available through Hugging Face
   private allowedModels = [
-    "gemini-1.5-pro",
-    "gemini-1.5-flash",
-    "gemini-pro",
-    "gemini-pro-vision"
+    "deepseek-ai/deepseek-v2",
+    "deepseek-ai/deepseek-v2-base",
+    "deepseek-ai/deepseek-coder-v2-base",
+    "deepseek-ai/deepseek-coder-v2",
+    "deepseek-ai/deepseek-math-v1",
+    "deepseek-ai/deepseek-v3-base",
+    "deepseek-ai/deepseek-llm-67b-chat"
   ];
 
   constructor(provider: { apiKey: string }) {
@@ -78,12 +81,12 @@ export class GeminiProvider extends AIProvider {
           code: 'circuit_open',
           retryAfter: Math.floor(this.circuitResetTimeout / 1000)
         },
-        provider: 'gemini'
+        provider: 'deepseek'
       };
     }
     
-    // Default model if not specified - use 2.5 Pro as the primary model
-    const model = params.model || 'gemini-1.5-pro';
+    // Default model - DeepSeek v3 base model
+    const model = params.model || 'deepseek-ai/deepseek-v3-base';
     
     // Validate model for security
     if (!this.validateModelSecurity(model)) {
@@ -93,59 +96,56 @@ export class GeminiProvider extends AIProvider {
           message: `Model "${model}" is not on the approved list for security reasons`,
           code: 'invalid_model'
         },
-        provider: 'gemini'
+        provider: 'deepseek'
       };
     }
     
     // Sanitize user inputs to prevent injection
     const sanitizedPrompt = this.sanitizeInput(params.prompt);
     
+    // Format prompt for chat models
+    const formattedPrompt = model.includes('chat') ? 
+      `<|im_start|>user\n${sanitizedPrompt}<|im_end|>\n<|im_start|>assistant\n` : 
+      sanitizedPrompt;
+    
     try {
       const response = await axios({
         method: 'POST',
-        url: `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`,
+        url: `${this.baseUrl}/${model}`,
         headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
         data: {
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: sanitizedPrompt }]
-            }
-          ],
-          generationConfig: {
+          inputs: formattedPrompt,
+          parameters: {
+            max_new_tokens: params.maxTokens || 512,
             temperature: params.temperature || 0.7,
-            maxOutputTokens: params.maxTokens || 1024,
-            topP: 0.95,
-            topK: 64
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
+            return_full_text: false,
+            do_sample: true,
+            top_p: 0.95
+          }
         },
-        timeout: 30000 // 30 second timeout
+        timeout: 60000 // 60 second timeout
       });
       
       this.handleSuccess();
       
-      // Extract the text content from the response
-      const generatedText = response.data.candidates[0].content.parts[0].text;
+      // Extract the generated text from the response
+      let generatedText = '';
+      
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        generatedText = response.data[0].generated_text;
+      } else if (response.data && response.data.generated_text) {
+        generatedText = response.data.generated_text;
+      } else {
+        generatedText = JSON.stringify(response.data);
+      }
+      
+      // Clean up assistant tag if present
+      if (generatedText.includes('<|im_end|>')) {
+        generatedText = generatedText.split('<|im_end|>')[0];
+      }
       
       const result: ProviderResponse = {
         success: true,
@@ -153,49 +153,49 @@ export class GeminiProvider extends AIProvider {
           text: generatedText,
           modelUsed: model
         },
-        provider: 'gemini'
+        provider: 'deepseek'
       };
       
       return result;
     } catch (error) {
       this.handleFailure(error);
-      return this.sanitizeError(error, 'gemini');
+      return this.sanitizeError(error, 'deepseek');
     }
   }
 
   async imageGeneration(params: ProviderImageParams): Promise<ProviderResponse> {
-    // Gemini API doesn't support standalone image generation yet
+    // DeepSeek via HuggingFace doesn't support image generation
     return {
       success: false,
       error: {
         message: 'Image generation not supported by this provider',
         code: 'unsupported_operation'
       },
-      provider: 'gemini'
+      provider: 'deepseek'
     };
   }
 
   async textToSpeech(params: ProviderTTSParams): Promise<ProviderResponse> {
-    // Gemini doesn't directly support TTS yet
+    // DeepSeek via HuggingFace doesn't support TTS
     return {
       success: false,
       error: {
         message: 'Text-to-speech not supported by this provider',
         code: 'unsupported_operation'
       },
-      provider: 'gemini'
+      provider: 'deepseek'
     };
   }
 
   async videoGeneration(params: ProviderVideoParams): Promise<ProviderResponse> {
-    // Gemini doesn't directly support video generation
+    // DeepSeek via HuggingFace doesn't support video generation
     return {
       success: false,
       error: {
         message: 'Video generation not supported by this provider',
         code: 'unsupported_operation'
       },
-      provider: 'gemini'
+      provider: 'deepseek'
     };
   }
 }

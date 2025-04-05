@@ -1,275 +1,317 @@
-import { AIProvider, ProviderRequestParams, ProviderResponse, ProviderImageParams, ProviderTTSParams, ProviderVideoParams } from "./provider";
-import { AiProvider } from "@shared/schema";
+import axios from "axios";
+import { 
+  AIProvider, 
+  ProviderRequestParams, 
+  ProviderResponse,
+  ProviderImageParams,
+  ProviderTTSParams,
+  ProviderVideoParams
+} from "./provider";
 
 export class HuggingFaceProvider extends AIProvider {
   private apiKey: string;
   private baseUrl: string = "https://api-inference.huggingface.co/models";
+  private consecutiveFailures: number = 0;
+  private circuitOpen: boolean = false;
+  private lastErrorTime: number = 0;
+  private circuitResetTimeout: number = 300000; // 5 minutes
   
-  constructor(provider: AiProvider) {
-    super(provider);
-    // Get API key from environment variables
-    this.apiKey = process.env.HUGGINGFACE_API_KEY || '';
+  // Security-focused model allowlist
+  private allowedTextModels = [
+    "google/flan-t5-xxl",
+    "google/flan-t5-xl",
+    "google/gemma-7b",
+    "google/flan-ul2",
+    "tiiuae/falcon-40b"
+  ];
+  
+  private allowedTTSModels = [
+    "facebook/mms-tts",
+    "coqui/XTTS-v2",
+    "espnet/kan-bayashi_ljspeech_vits"
+  ];
+  
+  private allowedImageModels = [
+    "stabilityai/stable-diffusion-xl-base-1.0",
+    "runwayml/stable-diffusion-v1-5",
+    "SG161222/Realistic_Vision_V4.0"
+  ];
+
+  constructor(provider: { apiKey: string }) {
+    super();
+    this.apiKey = provider.apiKey;
+  }
+
+  // Check if circuit breaker is open (service considered down)
+  private isCircuitOpen(): boolean {
+    // If circuit is open, check if we should try again
+    if (this.circuitOpen) {
+      const now = Date.now();
+      const timeSinceFailure = now - this.lastErrorTime;
+      
+      // Reset circuit after timeout period
+      if (timeSinceFailure > this.circuitResetTimeout) {
+        this.circuitOpen = false;
+        this.consecutiveFailures = 0;
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // Handle failures and potentially open circuit breaker
+  private handleFailure(error: any): void {
+    this.consecutiveFailures++;
+    this.lastErrorTime = Date.now();
     
-    if (!this.apiKey) {
-      console.warn(`Warning: HUGGINGFACE_API_KEY is not set. ${provider.name} will not work correctly.`);
+    // Open circuit breaker after threshold failures
+    if (this.consecutiveFailures >= 5) {
+      this.circuitOpen = true;
     }
   }
-  
+
+  // Reset failure count on success
+  private handleSuccess(): void {
+    this.consecutiveFailures = 0;
+  }
+
+  // Validate model for security
+  private validateModelSecurity(model: string, allowedModels: string[]): boolean {
+    // Prevent path traversal attacks or unauthorized model access
+    return this.validateModel(model, allowedModels);
+  }
+
   async textGeneration(params: ProviderRequestParams): Promise<ProviderResponse> {
-    try {
-      // Check if API key is available
-      if (!this.apiKey) {
-        return {
-          success: false,
-          error: "Hugging Face API key is not configured",
-          provider: this.name
-        };
-      }
-      
-      // Use specified model or default to a good text generation model
-      const model = params.model || "mistralai/Mistral-7B-Instruct-v0.2";
-      
-      // Make request to Hugging Face
-      const response = await fetch(`${this.baseUrl}/${model}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+    // Check circuit breaker
+    if (this.isCircuitOpen()) {
+      return {
+        success: false,
+        error: {
+          message: 'Service temporarily unavailable (circuit breaker open)',
+          code: 'circuit_open',
+          retryAfter: Math.floor(this.circuitResetTimeout / 1000)
         },
-        body: JSON.stringify({
-          inputs: params.prompt,
+        provider: 'huggingface'
+      };
+    }
+    
+    // Default model if not specified
+    const model = params.model || 'google/flan-t5-xl';
+    
+    // Validate model for security
+    if (!this.validateModelSecurity(model, this.allowedTextModels)) {
+      return {
+        success: false,
+        error: {
+          message: `Model "${model}" is not on the approved list for security reasons`,
+          code: 'invalid_model'
+        },
+        provider: 'huggingface'
+      };
+    }
+    
+    // Sanitize user inputs to prevent injection
+    const sanitizedPrompt = this.sanitizeInput(params.prompt);
+    
+    try {
+      const response = await axios({
+        method: 'POST',
+        url: `${this.baseUrl}/${model}`,
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        data: {
+          inputs: sanitizedPrompt,
           parameters: {
-            max_new_tokens: params.maxTokens || 512,
+            max_new_tokens: params.maxTokens || 256,
             temperature: params.temperature || 0.7,
             return_full_text: false
           }
-        })
+        },
+        timeout: 30000 // 30 second timeout
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        await this.recordUsage(params.user || 0, "textGeneration", false);
-        return {
-          success: false,
-          error: `Hugging Face API error: ${response.status} - ${errorText}`,
-          provider: this.name
-        };
-      }
-      
-      const data = await response.json();
-      await this.recordUsage(params.user || 0, "textGeneration", true);
-      
-      // Format varies depending on the model, handle both array and object responses
-      let result: string;
-      if (Array.isArray(data)) {
-        result = data[0].generated_text || '';
-      } else {
-        result = data.generated_text || '';
-      }
+      this.handleSuccess();
       
       return {
         success: true,
-        result,
-        provider: this.name
+        data: response.data[0].generated_text || response.data,
+        provider: 'huggingface'
       };
     } catch (error) {
-      await this.recordUsage(params.user || 0, "textGeneration", false);
-      return {
-        success: false,
-        error: `Error with ${this.name}: ${error instanceof Error ? error.message : String(error)}`,
-        provider: this.name
-      };
+      this.handleFailure(error);
+      return this.sanitizeError(error, 'huggingface');
     }
   }
-  
+
   async imageGeneration(params: ProviderImageParams): Promise<ProviderResponse> {
-    try {
-      // Check if API key is available
-      if (!this.apiKey) {
-        return {
-          success: false,
-          error: "Hugging Face API key is not configured",
-          provider: this.name
-        };
-      }
-      
-      // Use specified model or default to a good image generation model
-      const model = params.model || "stabilityai/stable-diffusion-xl-base-1.0";
-      
-      // Make request to Hugging Face
-      const response = await fetch(`${this.baseUrl}/${model}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`
+    // Check circuit breaker
+    if (this.isCircuitOpen()) {
+      return {
+        success: false,
+        error: {
+          message: 'Service temporarily unavailable (circuit breaker open)',
+          code: 'circuit_open',
+          retryAfter: Math.floor(this.circuitResetTimeout / 1000)
         },
-        body: JSON.stringify({
-          inputs: params.prompt,
+        provider: 'huggingface'
+      };
+    }
+    
+    // Default model if not specified
+    const model = params.model || 'stabilityai/stable-diffusion-xl-base-1.0';
+    
+    // Validate model for security
+    if (!this.validateModelSecurity(model, this.allowedImageModels)) {
+      return {
+        success: false,
+        error: {
+          message: `Model "${model}" is not on the approved list for security reasons`,
+          code: 'invalid_model'
+        },
+        provider: 'huggingface'
+      };
+    }
+    
+    // Sanitize user inputs to prevent injection
+    const sanitizedPrompt = this.sanitizeInput(params.prompt);
+    
+    try {
+      const response = await axios({
+        method: 'POST',
+        url: `${this.baseUrl}/${model}`,
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        data: {
+          inputs: sanitizedPrompt,
           parameters: {
-            guidance_scale: 7.5,
-            num_inference_steps: 50
+            width: params.width || 512,
+            height: params.height || 512,
+            num_inference_steps: 30,
+            guidance_scale: 7.5
           }
-        })
+        },
+        responseType: 'arraybuffer',
+        timeout: 60000 // 60 second timeout for image generation
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        await this.recordUsage(params.user || 0, "imageGeneration", false);
-        return {
-          success: false,
-          error: `Hugging Face API error: ${response.status} - ${errorText}`,
-          provider: this.name
-        };
-      }
+      this.handleSuccess();
       
-      // Response is the binary image data
-      const imageBlob = await response.blob();
-      
-      // Convert blob to base64 for easier handling
-      const arrayBuffer = await imageBlob.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64Image = `data:image/jpeg;base64,${buffer.toString('base64')}`;
-      
-      await this.recordUsage(params.user || 0, "imageGeneration", true);
+      // Convert buffer to base64
+      const imageBuffer = Buffer.from(response.data);
+      const base64Image = imageBuffer.toString('base64');
       
       return {
         success: true,
-        result: base64Image,
-        provider: this.name
+        data: {
+          format: 'base64',
+          image: base64Image
+        },
+        provider: 'huggingface'
       };
     } catch (error) {
-      await this.recordUsage(params.user || 0, "imageGeneration", false);
-      return {
-        success: false,
-        error: `Error with ${this.name}: ${error instanceof Error ? error.message : String(error)}`,
-        provider: this.name
-      };
+      this.handleFailure(error);
+      return this.sanitizeError(error, 'huggingface');
     }
   }
-  
+
   async textToSpeech(params: ProviderTTSParams): Promise<ProviderResponse> {
+    // Check circuit breaker
+    if (this.isCircuitOpen()) {
+      return {
+        success: false,
+        error: {
+          message: 'Service temporarily unavailable (circuit breaker open)',
+          code: 'circuit_open',
+          retryAfter: Math.floor(this.circuitResetTimeout / 1000)
+        },
+        provider: 'huggingface'
+      };
+    }
+    
+    // Default model if not specified
+    const model = params.model || 'facebook/mms-tts';
+    
+    // Validate model for security
+    if (!this.validateModelSecurity(model, this.allowedTTSModels)) {
+      return {
+        success: false,
+        error: {
+          message: `Model "${model}" is not on the approved list for security reasons`,
+          code: 'invalid_model'
+        },
+        provider: 'huggingface'
+      };
+    }
+    
+    // Sanitize user inputs to prevent injection
+    const sanitizedText = this.sanitizeInput(params.text);
+    
     try {
-      // Check if API key is available
-      if (!this.apiKey) {
-        return {
-          success: false,
-          error: "Hugging Face API key is not configured",
-          provider: this.name
+      // Set data based on model type
+      let data: any = {};
+      if (model === 'coqui/XTTS-v2') {
+        data = {
+          inputs: {
+            text: sanitizedText,
+            speaker_embedding: params.voice || 'random'
+          }
+        };
+      } else {
+        data = {
+          inputs: sanitizedText,
+          parameters: {
+            speaker_id: params.voice || 0
+          }
         };
       }
       
-      // Use a TTS model from Hugging Face (XTTS-v2 is a good one)
-      const model = "coqui/XTTS-v2";
-      
-      // Make request to Hugging Face
-      const response = await fetch(`${this.baseUrl}/${model}`, {
+      const response = await axios({
         method: 'POST',
+        url: `${this.baseUrl}/${model}`,
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          inputs: {
-            text: params.text,
-            speaker: params.voice || "default",
-            language: "en"
-          }
-        })
+        data,
+        responseType: 'arraybuffer',
+        timeout: 30000 // 30 second timeout
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        await this.recordUsage(params.user || 0, "textToSpeech", false);
-        return {
-          success: false,
-          error: `Hugging Face API error: ${response.status} - ${errorText}`,
-          provider: this.name
-        };
-      }
+      this.handleSuccess();
       
-      // Response is the binary audio data
-      const audioBlob = await response.blob();
-      
-      // Convert blob to base64 for easier handling
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64Audio = `data:audio/wav;base64,${buffer.toString('base64')}`;
-      
-      await this.recordUsage(params.user || 0, "textToSpeech", true);
+      // Convert buffer to base64
+      const audioBuffer = Buffer.from(response.data);
+      const base64Audio = audioBuffer.toString('base64');
       
       return {
         success: true,
-        result: base64Audio,
-        provider: this.name
+        data: {
+          format: 'base64',
+          audio: base64Audio,
+          contentType: 'audio/wav' // Most models return wav, adjust if needed
+        },
+        provider: 'huggingface'
       };
     } catch (error) {
-      await this.recordUsage(params.user || 0, "textToSpeech", false);
-      return {
-        success: false,
-        error: `Error with ${this.name}: ${error instanceof Error ? error.message : String(error)}`,
-        provider: this.name
-      };
+      this.handleFailure(error);
+      return this.sanitizeError(error, 'huggingface');
     }
   }
-  
+
   async videoGeneration(params: ProviderVideoParams): Promise<ProviderResponse> {
-    // Hugging Face doesn't have great video generation models yet, but we can use text-to-video models
-    try {
-      // Check if API key is available
-      if (!this.apiKey) {
-        return {
-          success: false,
-          error: "Hugging Face API key is not configured",
-          provider: this.name
-        };
-      }
-      
-      // Use a video generation model from Hugging Face
-      const model = params.model || "damo-vilab/text-to-video-ms-1.7b";
-      
-      // Make request to Hugging Face
-      const response = await fetch(`${this.baseUrl}/${model}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          inputs: params.prompt
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        await this.recordUsage(params.user || 0, "videoGeneration", false);
-        return {
-          success: false,
-          error: `Hugging Face API error: ${response.status} - ${errorText}`,
-          provider: this.name
-        };
-      }
-      
-      // Response should be a video file
-      const videoBlob = await response.blob();
-      
-      // Convert blob to base64 for easier handling
-      const arrayBuffer = await videoBlob.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64Video = `data:video/mp4;base64,${buffer.toString('base64')}`;
-      
-      await this.recordUsage(params.user || 0, "videoGeneration", true);
-      
-      return {
-        success: true,
-        result: base64Video,
-        provider: this.name
-      };
-    } catch (error) {
-      await this.recordUsage(params.user || 0, "videoGeneration", false);
-      return {
-        success: false,
-        error: `Error with ${this.name}: ${error instanceof Error ? error.message : String(error)}`,
-        provider: this.name
-      };
-    }
+    // HuggingFace doesn't directly support video generation via inference API
+    return {
+      success: false,
+      error: {
+        message: 'Video generation not supported by this provider',
+        code: 'unsupported_operation'
+      },
+      provider: 'huggingface'
+    };
   }
 }

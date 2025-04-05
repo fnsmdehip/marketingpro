@@ -36,25 +36,18 @@ export class DatabaseStorage implements IStorage {
       // Add default AI providers
       const providers = [
         {
-          name: "Gemini",
-          endpoint: "gemini/gemini-1.5-pro",
+          name: "gemini",
+          endpoint: "gemini-1.5-pro",
           status: "active",
           hourlyLimit: 60,
           dailyLimit: 250
         },
         {
-          name: "Gemini 2.5 Pro",
-          endpoint: "openrouter/gemini-2.5-pro",
+          name: "deepseek",
+          endpoint: "deepseek-ai/deepseek-v3-base",
           status: "active",
           hourlyLimit: 50,
           dailyLimit: 200
-        },
-        {
-          name: "DeepSeek v3",
-          endpoint: "openrouter/deepseek-coder-v3",
-          status: "active",
-          hourlyLimit: 30,
-          dailyLimit: 100
         },
         {
           name: "Hugging Face",
@@ -162,8 +155,33 @@ export class DatabaseStorage implements IStorage {
 
   async createContent(insertContent: InsertContent): Promise<Content> {
     try {
-      // The simplest approach - let Drizzle handle the InsertContent type
-      const [content] = await db.insert(contents).values(insertContent).returning();
+      // Convert mediaUrls to proper format for database
+      const preparedContent = { ...insertContent };
+      
+      // Handle arrays properly for JSON columns
+      if (preparedContent.mediaUrls) {
+        // Make sure it's an array even if it comes as a string
+        if (typeof preparedContent.mediaUrls === 'string') {
+          try {
+            preparedContent.mediaUrls = JSON.parse(preparedContent.mediaUrls as string);
+          } catch (e) {
+            preparedContent.mediaUrls = [(preparedContent.mediaUrls as string)];
+          }
+        }
+      }
+      
+      if (preparedContent.platforms) {
+        // Make sure it's an array even if it comes as a string
+        if (typeof preparedContent.platforms === 'string') {
+          try {
+            preparedContent.platforms = JSON.parse(preparedContent.platforms as string);
+          } catch (e) {
+            preparedContent.platforms = [(preparedContent.platforms as string)];
+          }
+        }
+      }
+      
+      const [content] = await db.insert(contents).values(preparedContent).returning();
       return content;
     } catch (error) {
       console.error("Error creating content:", error);
