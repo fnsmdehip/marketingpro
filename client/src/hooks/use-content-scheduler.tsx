@@ -1,30 +1,27 @@
-import { create } from "zustand";
-import { Content } from "@shared/schema";
-import { ReactNode } from "react";
+import { createContext, ReactNode, useContext, useState } from "react";
 
-interface ContentSchedulerState {
-  isOpen: boolean;
-  initialContent: Partial<Content>;
-  openScheduler: () => void;
-  closeScheduler: () => void;
-  updateSchedulerContent: (content: Partial<Content>) => void;
+type ContentSchedulerContextType = {
+  // Add content scheduler functionality if needed
+};
+
+export const ContentSchedulerContext = createContext<ContentSchedulerContextType | null>(null);
+
+export function ContentSchedulerProvider({ children }: { children: ReactNode }) {
+  return (
+    <ContentSchedulerContext.Provider
+      value={{
+        // Add content scheduler value here
+      }}
+    >
+      {children}
+    </ContentSchedulerContext.Provider>
+  );
 }
 
-export const useContentScheduler = create<ContentSchedulerState>((set) => ({
-  isOpen: false,
-  initialContent: {},
-  
-  openScheduler: () => set({ isOpen: true }),
-  closeScheduler: () => set({ isOpen: false, initialContent: {} }),
-  updateSchedulerContent: (content: Partial<Content>) => set((state: ContentSchedulerState) => ({ 
-    initialContent: { ...state.initialContent, ...content } 
-  })),
-}));
-
-// Provider component for use in the app
-export function ContentSchedulerProvider({ children }: { children: ReactNode }) {
-  // This is a context provider wrapper for the Zustand store
-  // It doesn't need to do anything except render its children
-  // since Zustand works by direct imports rather than React context
-  return <>{children}</>;
+export function useContentScheduler() {
+  const context = useContext(ContentSchedulerContext);
+  if (!context) {
+    throw new Error("useContentScheduler must be used within a ContentSchedulerProvider");
+  }
+  return context;
 }
