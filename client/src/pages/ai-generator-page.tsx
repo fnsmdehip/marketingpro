@@ -218,13 +218,15 @@ export default function AIGeneratorPage() {
   const createPromptWithPurpose = (prompt: string, purpose: string) => {
     switch (purpose) {
       case 'social-post':
-        return `Create a social media post about: ${prompt}. Make it engaging, conversational, and include relevant hashtags.`;
+        return `Create a short, engaging social media post about: ${prompt}. Make it conversational and authentic, add relevant hashtags, and keep it under 280 characters. Just provide the post text and hashtags with no additional formatting or instructions.`;
       case 'email-campaign':
-        return `Write an email campaign message about: ${prompt}. Make it persuasive with a clear call-to-action and professional tone.`;
+        return `Write an email campaign message about: ${prompt}. Make it persuasive with a clear call-to-action and professional tone. Only provide the final text with no additional formatting or instructions.`;
       case 'blog-post':
-        return `Write a blog post introduction about: ${prompt}. Make it informative, engaging, and SEO-friendly with approximately 150-200 words.`;
+        return `Write a blog post introduction about: ${prompt}. Make it informative, engaging, and SEO-friendly with approximately 150-200 words. Only provide the final text with no additional formatting or instructions.`;
       case 'product-description':
-        return `Create a compelling product description for: ${prompt}. Highlight key features, benefits, and create desire.`;
+        return `Create a compelling product description for: ${prompt}. Highlight key features, benefits, and create desire. Only provide the final text with no additional formatting or instructions.`;
+      case 'ad-copy':
+        return `Write concise and persuasive advertising copy for: ${prompt}. Make it attention-grabbing, benefit-focused, and include a strong call-to-action. Only provide the final ad text with no additional formatting or instructions.`;
       default:
         return prompt;
     }

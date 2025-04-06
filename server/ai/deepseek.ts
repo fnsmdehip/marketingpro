@@ -162,7 +162,7 @@ export class DeepSeekProvider extends AIProvider {
         messages: [
           {
             role: "system",
-            content: "You are an expert marketing content creator specializing in persuasive, high-converting copy that drives engagement and delivers business results."
+            content: "You are an expert marketing content creator specializing in persuasive, high-converting copy that drives engagement and delivers business results. Always return only the final content without any meta-instructions, templates, or placeholders."
           },
           {
             role: "user",
