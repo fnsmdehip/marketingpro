@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -17,8 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Loader2, Copy, PlusCircle, Send, CheckCircle2, Download, Layout } from "lucide-react";
+import { Loader2, Copy, PlusCircle, Send, CheckCircle2, Download, Layout, Sliders } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { ModelSelector } from "@/components/ai/model-selector";
+import { openScheduler, updateSchedulerContent } from "@/components/content/content-scheduler";
 
 type GeneratorType = "text" | "image" | "speech" | "video";
 
@@ -125,6 +126,11 @@ export default function AIGeneratorPage() {
     },
   });
   
+  // Loading states
+  const isGeneratingText = generateTextMutation.isPending;
+  const isGeneratingImage = generateImageMutation.isPending;
+  const isGeneratingSpeech = generateSpeechMutation.isPending;
+  
   // Function to handle text generation
   const handleGenerateText = () => {
     if (!textPrompt) {
@@ -211,19 +217,42 @@ export default function AIGeneratorPage() {
     }
   };
   
+  // Function to handle using image in scheduler
+  const useImageInScheduler = () => {
+    if (imageResult) {
+      updateSchedulerContent({
+        title: imagePrompt.substring(0, 50) + (imagePrompt.length > 50 ? '...' : ''),
+        body: `Image generated from prompt: ${imagePrompt}`,
+        mediaUrl: imageResult,
+      });
+      openScheduler();
+    }
+  };
+  
+  // Function to handle using speech in scheduler
+  const useSpeechInScheduler = () => {
+    if (speechResult) {
+      updateSchedulerContent({
+        title: speechText.substring(0, 50) + (speechText.length > 50 ? '...' : ''),
+        body: `Audio generated from text: ${speechText}`,
+        mediaUrl: speechResult,
+      });
+      openScheduler();
+    }
+  };
+  
   // Copy to clipboard function
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    // In a real app, you might want to show a toast or some UI feedback
+    toast({
+      title: "Copied to clipboard",
+      description: "Content has been copied to your clipboard.",
+    });
   };
   
   return (
     <div className="container mx-auto py-8 px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
+      <div className="transition-all duration-300 ease-in-out">
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-xl font-semibold text-gray-800">AI Generator</h2>
@@ -234,7 +263,7 @@ export default function AIGeneratorPage() {
           
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500">
-              {providers.filter(p => p.status === 'active').length} active providers
+              {providers.filter((p: any) => p.status === 'active').length} active providers
             </span>
             <Button onClick={openScheduler}>
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -245,7 +274,7 @@ export default function AIGeneratorPage() {
         
         {/* Provider Status Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {providers.slice(0, 4).map((provider) => (
+          {providers.slice(0, 4).map((provider: any) => (
             <Card key={provider.name}>
               <CardContent className="p-4">
                 <div className="flex items-center">
@@ -571,14 +600,7 @@ export default function AIGeneratorPage() {
                       </Button>
                       <Button 
                         size="sm"
-                        onClick={() => {
-                          updateSchedulerContent({
-                            title: imagePrompt.substring(0, 50) + (imagePrompt.length > 50 ? '...' : ''),
-                            body: imagePrompt,
-                            mediaUrls: imageResult ? [imageResult] : []
-                          });
-                          openScheduler();
-                        }}
+                        onClick={useImageInScheduler}
                       >
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Use in Scheduler
@@ -607,28 +629,28 @@ export default function AIGeneratorPage() {
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">Be Descriptive</h4>
                       <p className="text-sm text-gray-500">
-                        Include details about subject, setting, lighting, colors, and mood.
+                        Include details about scene, lighting, perspective, and mood.
                       </p>
                     </div>
                     
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">Specify Style</h4>
                       <p className="text-sm text-gray-500">
-                        Mention art styles like "photorealistic," "oil painting," or "digital art."
+                        Mention art styles like "photorealistic", "oil painting", or "anime style".
                       </p>
                     </div>
                     
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Use Reference Artists</h4>
+                      <h4 className="text-sm font-medium">Use Quality Descriptors</h4>
                       <p className="text-sm text-gray-500">
-                        Include "in the style of [artist name]" for specific aesthetics.
+                        Add terms like "high quality", "detailed", or "professional".
                       </p>
                     </div>
                     
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Add Technical Details</h4>
+                      <h4 className="text-sm font-medium">Try Different Models</h4>
                       <p className="text-sm text-gray-500">
-                        Terms like "high resolution," "detailed," or "sharp focus" can improve quality.
+                        Different models excel at different styles and subjects.
                       </p>
                     </div>
                   </CardContent>
@@ -643,7 +665,7 @@ export default function AIGeneratorPage() {
               <div className="lg:col-span-2 space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Text-to-Speech Generator</CardTitle>
+                    <CardTitle>Text to Speech</CardTitle>
                     <CardDescription>
                       Convert text to natural-sounding speech
                     </CardDescription>
@@ -653,29 +675,29 @@ export default function AIGeneratorPage() {
                       <Label htmlFor="speech-text">Text</Label>
                       <Textarea
                         id="speech-text"
-                        placeholder="Enter the text you want to convert to speech..."
+                        placeholder="Enter text to convert to speech..."
                         value={speechText}
                         onChange={(e) => setSpeechText(e.target.value)}
-                        rows={6}
+                        rows={4}
                       />
                     </div>
                     
                     <div>
-                      <Label htmlFor="speech-voice">Voice</Label>
+                      <Label htmlFor="voice-type">Voice</Label>
                       <Select
                         value={speechVoice}
                         onValueChange={setSpeechVoice}
                       >
-                        <SelectTrigger id="speech-voice">
+                        <SelectTrigger id="voice-type">
                           <SelectValue placeholder="Select voice" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="default">Default</SelectItem>
-                          <SelectItem value="male_1">Male 1</SelectItem>
-                          <SelectItem value="male_2">Male 2</SelectItem>
-                          <SelectItem value="female_1">Female 1</SelectItem>
-                          <SelectItem value="female_2">Female 2</SelectItem>
-                          <SelectItem value="narration">Narration</SelectItem>
+                          <SelectItem value="male-1">Male 1</SelectItem>
+                          <SelectItem value="male-2">Male 2</SelectItem>
+                          <SelectItem value="female-1">Female 1</SelectItem>
+                          <SelectItem value="female-2">Female 2</SelectItem>
+                          <SelectItem value="neutral">Neutral</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -702,29 +724,30 @@ export default function AIGeneratorPage() {
                 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Generated Speech</CardTitle>
+                    <CardTitle>Generated Audio</CardTitle>
                     <CardDescription>
                       Your generated audio will appear here
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="p-6 rounded-md bg-gray-50 flex items-center justify-center">
-                      {isGeneratingSpeech ? (
-                        <div className="flex flex-col items-center justify-center py-10">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-                          <p className="text-sm text-gray-500">Generating speech...</p>
-                        </div>
-                      ) : speechResult ? (
-                        <audio controls className="w-full">
-                          <source src={speechResult} />
-                          Your browser does not support the audio element.
-                        </audio>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                          <p>Generated audio will appear here</p>
-                        </div>
-                      )}
-                    </div>
+                    {isGeneratingSpeech ? (
+                      <div className="flex flex-col items-center justify-center py-10">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                        <p className="text-sm text-gray-500">Generating audio...</p>
+                      </div>
+                    ) : speechResult ? (
+                      <div className="w-full">
+                        <audio 
+                          controls 
+                          className="w-full" 
+                          src={speechResult}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                        <p>Generated audio will appear here</p>
+                      </div>
+                    )}
                   </CardContent>
                   {speechResult && (
                     <CardFooter className="flex justify-end space-x-2">
@@ -738,14 +761,7 @@ export default function AIGeneratorPage() {
                       </Button>
                       <Button 
                         size="sm"
-                        onClick={() => {
-                          updateSchedulerContent({
-                            title: speechText.substring(0, 50) + (speechText.length > 50 ? '...' : ''),
-                            body: speechText,
-                            // In a real implementation, you might want to handle audio attachments
-                          });
-                          openScheduler();
-                        }}
+                        onClick={useSpeechInScheduler}
                       >
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Use in Scheduler
@@ -765,37 +781,37 @@ export default function AIGeneratorPage() {
                 
                 <Card className="mt-6">
                   <CardHeader>
-                    <CardTitle>TTS Best Practices</CardTitle>
+                    <CardTitle>Speech Tips</CardTitle>
                     <CardDescription>
-                      Tips for optimal text-to-speech results
+                      How to get better text-to-speech results
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Use Natural Language</h4>
-                      <p className="text-sm text-gray-500">
-                        Write in a conversational style as if speaking to someone.
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
                       <h4 className="text-sm font-medium">Add Punctuation</h4>
                       <p className="text-sm text-gray-500">
-                        Include commas and periods to create natural pauses in speech.
+                        Include proper punctuation for better pacing and natural pauses.
                       </p>
                     </div>
                     
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">Avoid Special Characters</h4>
                       <p className="text-sm text-gray-500">
-                        Special characters and symbols might not be properly pronounced.
+                        Some special characters may not be properly interpreted.
                       </p>
                     </div>
                     
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Test Short Segments</h4>
+                      <h4 className="text-sm font-medium">Test Different Voices</h4>
                       <p className="text-sm text-gray-500">
-                        Start with shorter text segments to test voice and pacing.
+                        Different voices may handle certain texts better than others.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Keep It Concise</h4>
+                      <p className="text-sm text-gray-500">
+                        Shorter sentences generally produce more natural speech output.
                       </p>
                     </div>
                   </CardContent>
@@ -804,97 +820,26 @@ export default function AIGeneratorPage() {
             </div>
           </TabsContent>
           
-          {/* Video Generation */}
+          {/* Video Generation - Coming Soon */}
           <TabsContent value="video">
-            <Card>
-              <CardHeader>
-                <CardTitle>Video Generator</CardTitle>
-                <CardDescription>
-                  Create short AI-generated videos from text descriptions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="video-prompt">Prompt</Label>
-                      <Textarea
-                        id="video-prompt"
-                        placeholder="Describe the video you want to generate..."
-                        value={videoPrompt}
-                        onChange={(e) => setVideoPrompt(e.target.value)}
-                        rows={4}
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="video-length">Length (seconds)</Label>
-                        <Select
-                          value={videoLength}
-                          onValueChange={setVideoLength}
-                        >
-                          <SelectTrigger id="video-length">
-                            <SelectValue placeholder="Select length" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="3">3 seconds</SelectItem>
-                            <SelectItem value="5">5 seconds</SelectItem>
-                            <SelectItem value="10">10 seconds</SelectItem>
-                            <SelectItem value="15">15 seconds</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="video-model">Model</Label>
-                        <Select
-                          value={videoModel}
-                          onValueChange={setVideoModel}
-                        >
-                          <SelectTrigger id="video-model">
-                            <SelectValue placeholder="Select model" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="damo-text-to-video">DAMO Text-to-Video</SelectItem>
-                            <SelectItem value="text-to-video-ms">Text-to-Video MS</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <Button className="w-full">
-                      <Send className="mr-2 h-4 w-4" />
-                      Generate
-                    </Button>
-                    
-                    <div className="p-4 bg-yellow-50 rounded-md text-yellow-800 text-sm">
-                      <div className="flex items-start">
-                        <CheckCircle2 className="h-5 w-5 mr-2 shrink-0" />
-                        <p>
-                          Video generation is an advanced feature that requires 
-                          significant processing power. For best results, use 
-                          clear and specific prompts describing the scene, action, 
-                          and style you want to achieve.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col">
-                    <Label className="mb-2">Preview</Label>
-                    <div className="aspect-video bg-gray-100 rounded-md flex items-center justify-center">
-                      <p className="text-gray-500">Video preview will appear here</p>
-                    </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      Video generation can take several minutes to complete.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="min-h-[60vh] flex flex-col items-center justify-center p-10 text-center">
+              <Layout className="h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-xl font-medium mb-2">Video Generation Coming Soon</h3>
+              <p className="text-gray-500 max-w-lg">
+                We're working on integrating advanced AI video generation capabilities.
+                This feature will be available in an upcoming release.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-6"
+                onClick={() => setActiveTab("text")}
+              >
+                Try Text Generation
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
-      </motion.div>
+      </div>
     </div>
   );
 }

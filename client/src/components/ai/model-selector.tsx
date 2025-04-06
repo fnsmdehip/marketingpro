@@ -1,166 +1,140 @@
 import { useState } from "react";
-import { useAIProviders } from "@/hooks/use-ai-providers";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { 
-  Card, 
-  CardContent,
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { Sliders } from "lucide-react";
 
-interface ModelSelectorProps {
+type ModelSelectorProps = {
   modelType: "text" | "image" | "speech" | "video";
   selectedModel: string;
   onSelectModel: (model: string) => void;
   temperature?: number;
-  onTemperatureChange?: (value: number) => void;
+  onTemperatureChange?: (temperature: number) => void;
   disabled?: boolean;
-}
+};
 
 export function ModelSelector({
   modelType,
   selectedModel,
   onSelectModel,
-  temperature = 0.7,
+  temperature,
   onTemperatureChange,
-  disabled = false
+  disabled = false,
 }: ModelSelectorProps) {
-  const { providers, isLoading: isLoadingProviders } = useAIProviders();
-  const [showTemperature, setShowTemperature] = useState(false);
-  
-  // Models for each type
-  const modelOptions = {
+  const { data: providers = [] } = useQuery({
+    queryKey: ["/api/ai/providers"],
+  });
+
+  // Get available models for the selected type
+  const getAvailableModels = () => {
+    const availableModels: { name: string; provider: string }[] = [];
+
+    providers.forEach((provider: any) => {
+      if (provider.status === "active" && provider.capabilities.includes(modelType)) {
+        if (modelType === "text" && provider.textModels) {
+          provider.textModels.forEach((model: string) => {
+            availableModels.push({ name: model, provider: provider.name });
+          });
+        } else if (modelType === "image" && provider.imageModels) {
+          provider.imageModels.forEach((model: string) => {
+            availableModels.push({ name: model, provider: provider.name });
+          });
+        } else if (modelType === "speech" && provider.speechModels) {
+          provider.speechModels.forEach((model: string) => {
+            availableModels.push({ name: model, provider: provider.name });
+          });
+        } else if (modelType === "video" && provider.videoModels) {
+          provider.videoModels.forEach((model: string) => {
+            availableModels.push({ name: model, provider: provider.name });
+          });
+        }
+      }
+    });
+
+    return availableModels;
+  };
+
+  const availableModels = getAvailableModels();
+
+  // Default models if none are returned from the API
+  const defaultModels = {
     text: [
-      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", provider: "Gemini 2.5 Pro" },
-      { id: "deepseek-coder-v3", name: "DeepSeek v3", provider: "DeepSeek v3" },
-      { id: "mistral-7b", name: "Mistral 7B (Hugging Face)", provider: "Hugging Face" },
-      { id: "llama-3-8b-instruct", name: "Llama 3 8B (Replicate)", provider: "Replicate" },
+      { name: "gemini-2.5-pro", provider: "Google" },
+      { name: "gpt-4o", provider: "OpenAI" },
+      { name: "deepseek-v3", provider: "DeepSeek" },
     ],
     image: [
-      { id: "stable-diffusion-xl", name: "Stable Diffusion XL", provider: "Hugging Face" },
-      { id: "sdxl", name: "SDXL (Replicate)", provider: "Replicate" },
-      { id: "openjourney", name: "OpenJourney", provider: "Hugging Face" },
+      { name: "stable-diffusion-xl", provider: "Stability AI" },
+      { name: "dall-e-3", provider: "OpenAI" },
     ],
     speech: [
-      { id: "xtts-v2", name: "XTTS v2", provider: "Hugging Face" },
-      { id: "bark", name: "Bark (Replicate)", provider: "Replicate" },
+      { name: "xtts-v2", provider: "Hugging Face" },
+      { name: "whisper-1", provider: "OpenAI" },
     ],
     video: [
-      { id: "damo-text-to-video", name: "DAMO Text-to-Video", provider: "Replicate" },
-      { id: "text-to-video-ms", name: "Text-to-Video MS", provider: "Hugging Face" },
-    ]
+      { name: "damo-text-to-video", provider: "ModelScope" },
+      { name: "gen-2", provider: "Runway" },
+    ],
   };
-  
-  // Filter available models based on active providers
-  const getAvailableModels = () => {
-    if (isLoadingProviders || providers.length === 0) {
-      return modelOptions[modelType];
-    }
-    
-    // Get active provider names
-    const activeProviders = providers
-      .filter(p => p.status === 'active' && p.usage.percentage < 95)
-      .map(p => p.name);
-    
-    // Filter models by active providers
-    return modelOptions[modelType].filter(model => 
-      activeProviders.includes(model.provider)
-    );
-  };
-  
-  const availableModels = getAvailableModels();
-  
-  // Handle model selection
-  const handleModelChange = (value: string) => {
-    onSelectModel(value);
-    
-    // Show temperature slider for text models
-    setShowTemperature(modelType === 'text');
-  };
-  
-  // Handle temperature change
-  const handleTemperatureChange = (value: number[]) => {
-    if (onTemperatureChange) {
-      onTemperatureChange(value[0]);
-    }
-  };
-  
+
+  const models = availableModels.length > 0 
+    ? availableModels 
+    : defaultModels[modelType as keyof typeof defaultModels];
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Select AI Model</CardTitle>
-        <CardDescription>
-          Choose the best model for your {modelType} generation needs
-        </CardDescription>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center">
+          <Sliders className="mr-2 h-4 w-4" />
+          Model Settings
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        {isLoadingProviders ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="model-select">Model</Label>
-              <Select 
-                value={selectedModel} 
-                onValueChange={handleModelChange}
-                disabled={disabled}
-              >
-                <SelectTrigger id="model-select">
-                  <SelectValue placeholder="Select a model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableModels.map(model => (
-                    <SelectItem key={model.id} value={model.id}>
-                      {model.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="model-selector">AI Model</Label>
+          <Select
+            id="model-selector"
+            value={selectedModel}
+            onValueChange={onSelectModel}
+            disabled={disabled}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select model" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem key={model.name} value={model.name}>
+                  {model.name} ({model.provider})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {modelType === "text" && onTemperatureChange && temperature !== undefined && (
+          <div>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="temperature">Temperature: {temperature.toFixed(1)}</Label>
             </div>
-            
-            {showTemperature && onTemperatureChange && (
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="temperature-slider">Temperature: {temperature}</Label>
-                </div>
-                <Slider
-                  id="temperature-slider"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={[temperature]}
-                  onValueChange={handleTemperatureChange}
-                  disabled={disabled}
-                />
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Precise</span>
-                  <span>Creative</span>
-                </div>
-              </div>
-            )}
+            <Slider
+              id="temperature"
+              min={0}
+              max={1}
+              step={0.1}
+              value={[temperature]}
+              onValueChange={([newTemperature]) => onTemperatureChange(newTemperature)}
+              disabled={disabled}
+              className="mt-2"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Precise</span>
+              <span>Creative</span>
+            </div>
           </div>
         )}
       </CardContent>
-      <CardFooter className="text-xs text-gray-500">
-        {modelType === 'text' ? 
-          'Higher temperature values produce more creative but less predictable results.' :
-          'Different models may produce varying styles and qualities.'}
-      </CardFooter>
     </Card>
   );
 }
-
-export default ModelSelector;

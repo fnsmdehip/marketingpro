@@ -4,7 +4,7 @@ import App from "./App";
 import "./index.css";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./hooks/use-auth";
-import { ContentSchedulerProvider } from "./hooks/use-content-scheduler";
+import { ContentSchedulerProvider } from "./components/content/content-scheduler";
 import { AIProvider } from "./hooks/use-ai-providers";
 import { Toaster } from "./components/ui/toaster";
 
