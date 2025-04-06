@@ -249,12 +249,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Routes
   app.get("/api/ai/providers", async (req, res) => {
     try {
-      // Allow skipAuth for testing
-      const skipAuth = req.query.skipAuth === 'true';
-      if (!skipAuth && !req.isAuthenticated()) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
+      // This endpoint is now public - no authentication required
+      // It only returns provider names and capabilities, no sensitive data
       const providers = await aiManager.getProvidersStatus();
       res.json(providers);
     } catch (error) {

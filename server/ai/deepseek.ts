@@ -20,7 +20,12 @@ export class DeepSeekProvider extends AIProvider {
   
   // DeepSeek models available through OpenRouter
   private allowedModels = [
-    "deepseek/deepseek-v3-base:free",
+    // Prioritized free models
+    "deepseek/deepseek-chat-v3-0324:free", // Primary model - better quality
+    "deepseek/deepseek-v3-base:free",      // First fallback if rate limited
+    "deepseek/deepseek-r1-zero:free",      // Second fallback if rate limited
+    
+    // Other models still available
     "deepseek/deepseek-coder-v2-instruct",
     "deepseek-ai/deepseek-v2",
     "deepseek-ai/deepseek-v2-base",
@@ -34,6 +39,15 @@ export class DeepSeekProvider extends AIProvider {
   constructor(provider: { apiKey: string }) {
     super();
     this.apiKey = provider.apiKey;
+    console.log("Initializing DeepSeek provider with API key:", this.apiKey?.substring(0, 10) + "...");
+    
+    // For debugging only
+    if (this.apiKey.startsWith('sk-or-')) {
+      console.log("DeepSeek using valid OpenRouter API key format");
+    } else {
+      console.warn("DeepSeek API key does not match expected OpenRouter format (should start with sk-or-)");
+    }
+    
     // Initialize OpenAI client with OpenRouter base URL
     this.client = new OpenAI({
       baseURL: this.baseUrl,
@@ -98,8 +112,8 @@ export class DeepSeekProvider extends AIProvider {
       };
     }
     
-    // Default model - DeepSeek v3 base free model from OpenRouter
-    const model = params.model || 'deepseek/deepseek-v3-base:free';
+    // Default model - DeepSeek Chat v3 model from OpenRouter 
+    const model = params.model || 'deepseek/deepseek-chat-v3-0324:free';
     
     // Validate model for security
     if (!this.validateModelSecurity(model)) {

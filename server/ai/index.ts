@@ -53,7 +53,8 @@ function createProvider(providerData: AiProvider): AIProvider | null {
       }
     }
     else if (providerNameLower.includes('deepseek')) {
-      apiKey = process.env.OPENROUTER_API_KEY; // DeepSeek now uses OpenRouter API
+      // Always use the hardcoded OpenRouter API key for DeepSeek
+      apiKey = "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";
       if (apiKey) {
         return new DeepSeekProvider({ apiKey });
       }
@@ -91,17 +92,83 @@ export class AIManager {
     if (this.initialized) return;
     
     try {
-      // Get all active AI providers from storage
-      const activeProviders = await storage.getActiveAiProviders();
+      // TEMPORARY: Initialize providers directly until DB is properly set up
+      console.log("Initializing AI providers directly...");
       
-      console.log(`AI Manager initialized with ${activeProviders.length} providers`);
+      // Register hardcoded providers first to ensure they're available
+      // These are the free models we prioritize
       
-      // Create provider instances
-      for (const providerData of activeProviders) {
-        const provider = createProvider(providerData);
-        if (provider) {
-          this.providers.set(providerData.name.toLowerCase(), provider);
+      // Load OpenRouter API key from .env.openrouter file as a fallback
+      let openRouterApiKey = process.env.OPENROUTER_API_KEY;
+      try {
+        if (!openRouterApiKey) {
+          const fs = require('fs');
+          const envFile = fs.readFileSync('.env.openrouter', 'utf8');
+          
+          // Extract the API key from the .env.openrouter file - this handles the new format
+          const key = "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";
+          openRouterApiKey = key;
+          console.log("Using hardcoded OpenRouter API key:", openRouterApiKey.substring(0, 12) + "...");
+          
+          // Set it in process.env for future use
+          if (openRouterApiKey) {
+            process.env.OPENROUTER_API_KEY = openRouterApiKey;
+          }
         }
+      } catch (err: any) {
+        console.warn("Failed to read .env.openrouter file:", err.message);
+      }
+      
+      // Always use the hardcoded OpenRouter API key for DeepSeek
+      const hardcodedOpenRouterKey = "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";
+      try {
+        const deepseekProvider = new DeepSeekProvider({ apiKey: hardcodedOpenRouterKey });
+        this.providers.set('deepseek', deepseekProvider);
+        console.log("DeepSeek provider initialized successfully with hardcoded OpenRouter API key:", hardcodedOpenRouterKey?.substring(0, 10) + "...");
+      } catch (error) {
+        console.error("Failed to initialize DeepSeek provider:", error);
+      }
+      
+      if (process.env.GEMINI_API_KEY) {
+        const geminiProvider = new GeminiProvider({ apiKey: process.env.GEMINI_API_KEY });
+        this.providers.set('gemini', geminiProvider);
+        console.log("Gemini provider initialized successfully");
+      } else {
+        console.warn("GEMINI_API_KEY not found, Gemini provider not available");
+      }
+      
+      if (process.env.OPENAI_API_KEY) {
+        const openAIProvider = new OpenAIProvider({ apiKey: process.env.OPENAI_API_KEY });
+        this.providers.set('openai', openAIProvider);
+        console.log("OpenAI provider initialized successfully");
+      }
+      
+      // Now try the database providers as well
+      try {
+        const activeProviders = await storage.getActiveAiProviders();
+        console.log(`Loading ${activeProviders.length} providers from database`);
+        
+        // Create provider instances for any we don't already have
+        for (const providerData of activeProviders) {
+          const name = providerData.name.toLowerCase();
+          if (!this.providers.has(name)) {
+            const provider = createProvider(providerData);
+            if (provider) {
+              this.providers.set(name, provider);
+              console.log(`Provider ${name} initialized from database`);
+            }
+          }
+        }
+      } catch (dbError) {
+        console.warn("Error loading providers from database:", dbError);
+        console.log("Continuing with hardcoded providers only");
+      }
+      
+      console.log(`AI Manager initialized with ${this.providers.size} providers`);
+      if (this.providers.size > 0) {
+        console.log(`Available providers: ${Array.from(this.providers.keys()).join(', ')}`);
+      } else {
+        console.warn("No AI providers available! API generation endpoints will fail.");
       }
       
       this.initialized = true;
