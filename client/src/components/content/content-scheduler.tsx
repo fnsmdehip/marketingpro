@@ -1,4 +1,4 @@
-import { useState, createContext, useContext, ReactNode } from "react";
+import { useState, createContext, useContext, ReactNode, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,9 +40,16 @@ export function ContentSchedulerProvider({ children }: { children: ReactNode }) 
   const updateContent = (newContent: ScheduleContent) => {
     setContent((prev) => ({ ...prev, ...newContent }));
   };
+  
+  // Set the context in the service
+  const contextValue = { open, setOpen, content, updateContent };
+  // Effect to update the service with the latest context
+  useEffect(() => {
+    SchedulerService.setContext(contextValue);
+  }, [open, content]);
 
   return (
-    <SchedulerContext.Provider value={{ open, setOpen, content, updateContent }}>
+    <SchedulerContext.Provider value={contextValue}>
       {children}
       <ContentSchedulerDialog />
     </SchedulerContext.Provider>
@@ -58,20 +65,26 @@ export function useContentScheduler() {
   return context;
 }
 
-// Helper functions for external components
-export function openScheduler() {
-  const context = useContext(SchedulerContext);
-  if (context) {
-    context.setOpen(true);
+// Create a scheduler service object instead of hooks
+export const SchedulerService = {
+  _context: null as SchedulerContextType | null,
+  
+  setContext(context: SchedulerContextType) {
+    this._context = context;
+  },
+  
+  openScheduler() {
+    if (this._context) {
+      this._context.setOpen(true);
+    }
+  },
+  
+  updateContent(content: ScheduleContent) {
+    if (this._context) {
+      this._context.updateContent(content);
+    }
   }
-}
-
-export function updateSchedulerContent(content: ScheduleContent) {
-  const context = useContext(SchedulerContext);
-  if (context) {
-    context.updateContent(content);
-  }
-}
+};
 
 // Dialog Component
 function ContentSchedulerDialog() {

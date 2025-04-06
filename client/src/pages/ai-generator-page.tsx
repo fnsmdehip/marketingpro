@@ -19,7 +19,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Loader2, Copy, PlusCircle, Send, CheckCircle2, Download, Layout, Sliders } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { ModelSelector } from "@/components/ai/model-selector";
-import { openScheduler, updateSchedulerContent } from "@/components/content/content-scheduler";
+import { SchedulerService } from "@/components/content/content-scheduler";
 
 type GeneratorType = "text" | "image" | "speech" | "video";
 
@@ -209,35 +209,35 @@ export default function AIGeneratorPage() {
   // Function to handle using text in scheduler
   const useTextInScheduler = () => {
     if (textResult) {
-      updateSchedulerContent({
+      SchedulerService.updateContent({
         title: textPrompt.substring(0, 50) + (textPrompt.length > 50 ? '...' : ''),
         body: textResult,
       });
-      openScheduler();
+      SchedulerService.openScheduler();
     }
   };
   
   // Function to handle using image in scheduler
   const useImageInScheduler = () => {
     if (imageResult) {
-      updateSchedulerContent({
+      SchedulerService.updateContent({
         title: imagePrompt.substring(0, 50) + (imagePrompt.length > 50 ? '...' : ''),
         body: `Image generated from prompt: ${imagePrompt}`,
         mediaUrl: imageResult,
       });
-      openScheduler();
+      SchedulerService.openScheduler();
     }
   };
   
   // Function to handle using speech in scheduler
   const useSpeechInScheduler = () => {
     if (speechResult) {
-      updateSchedulerContent({
+      SchedulerService.updateContent({
         title: speechText.substring(0, 50) + (speechText.length > 50 ? '...' : ''),
         body: `Audio generated from text: ${speechText}`,
         mediaUrl: speechResult,
       });
-      openScheduler();
+      SchedulerService.openScheduler();
     }
   };
   
@@ -265,7 +265,7 @@ export default function AIGeneratorPage() {
             <span className="text-sm text-gray-500">
               {providers.filter((p: any) => p.status === 'active').length} active providers
             </span>
-            <Button onClick={openScheduler}>
+            <Button onClick={() => SchedulerService.openScheduler()}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Schedule Content
             </Button>
