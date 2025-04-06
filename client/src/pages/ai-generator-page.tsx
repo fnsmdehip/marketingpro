@@ -28,7 +28,7 @@ export default function AIGeneratorPage() {
   const { toast } = useToast();
   
   // Get AI providers data
-  const { data: providers = [] } = useQuery({
+  const { data: providers = [] } = useQuery<any[]>({
     queryKey: ["/api/ai/providers"],
   });
   
@@ -67,11 +67,19 @@ export default function AIGeneratorPage() {
       return await res.json();
     },
     onSuccess: (data) => {
-      setTextResult(typeof data.result === 'string' ? data.result : data.result.join(''));
-      toast({
-        title: "Text generated successfully",
-        description: "You can now copy or use this text.",
-      });
+      if (data.success) {
+        setTextResult(data.data || "No content generated");
+        toast({
+          title: "Text generated successfully",
+          description: "You can now copy or use this text.",
+        });
+      } else {
+        toast({
+          title: "Error generating text",
+          description: data.error?.message || "Unknown error occurred",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -89,11 +97,19 @@ export default function AIGeneratorPage() {
       return await res.json();
     },
     onSuccess: (data) => {
-      setImageResult(typeof data.result === 'string' ? data.result : data.result[0]);
-      toast({
-        title: "Image generated successfully",
-        description: "Your image is ready to use.",
-      });
+      if (data.success) {
+        setImageResult(data.data || null);
+        toast({
+          title: "Image generated successfully",
+          description: "Your image is ready to use.",
+        });
+      } else {
+        toast({
+          title: "Error generating image",
+          description: data.error?.message || "Unknown error occurred",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -111,11 +127,19 @@ export default function AIGeneratorPage() {
       return await res.json();
     },
     onSuccess: (data) => {
-      setSpeechResult(typeof data.result === 'string' ? data.result : data.result[0]);
-      toast({
-        title: "Speech generated successfully",
-        description: "Your audio is ready to play.",
-      });
+      if (data.success) {
+        setSpeechResult(data.data || null);
+        toast({
+          title: "Speech generated successfully",
+          description: "Your audio is ready to play.",
+        });
+      } else {
+        toast({
+          title: "Error generating speech",
+          description: data.error?.message || "Unknown error occurred",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
