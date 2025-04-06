@@ -7,17 +7,21 @@ import {
   ProviderTTSParams,
   ProviderVideoParams
 } from "./provider";
+import { OpenAI } from "openai";
 
 export class DeepSeekProvider extends AIProvider {
   private apiKey: string;
-  private baseUrl: string = "https://api-inference.huggingface.co/models";
+  private baseUrl: string = "https://openrouter.ai/api/v1";
   private consecutiveFailures: number = 0;
   private circuitOpen: boolean = false;
   private lastErrorTime: number = 0;
   private circuitResetTimeout: number = 300000; // 5 minutes
+  private client: OpenAI;
   
-  // DeepSeek models available through Hugging Face
+  // DeepSeek models available through OpenRouter
   private allowedModels = [
+    "deepseek/deepseek-v3-base:free",
+    "deepseek/deepseek-coder-v2-instruct",
     "deepseek-ai/deepseek-v2",
     "deepseek-ai/deepseek-v2-base",
     "deepseek-ai/deepseek-coder-v2-base",
@@ -30,6 +34,15 @@ export class DeepSeekProvider extends AIProvider {
   constructor(provider: { apiKey: string }) {
     super();
     this.apiKey = provider.apiKey;
+    // Initialize OpenAI client with OpenRouter base URL
+    this.client = new OpenAI({
+      baseURL: this.baseUrl,
+      apiKey: this.apiKey,
+      defaultHeaders: {
+        "HTTP-Referer": "https://marketingsaasapp.replit.app",
+        "X-Title": "MarketingSaaS"
+      }
+    });
   }
 
   // Check if circuit breaker is open (service considered down)
@@ -85,8 +98,8 @@ export class DeepSeekProvider extends AIProvider {
       };
     }
     
-    // Default model - DeepSeek v3 base model
-    const model = params.model || 'deepseek-ai/deepseek-v3-base';
+    // Default model - DeepSeek v3 base free model from OpenRouter
+    const model = params.model || 'deepseek/deepseek-v3-base:free';
     
     // Validate model for security
     if (!this.validateModelSecurity(model)) {
@@ -103,62 +116,50 @@ export class DeepSeekProvider extends AIProvider {
     // Sanitize user inputs to prevent injection
     const sanitizedPrompt = this.sanitizeInput(params.prompt);
     
-    // Format prompt for chat models
-    const formattedPrompt = model.includes('chat') ? 
-      `<|im_start|>user\n${sanitizedPrompt}<|im_end|>\n<|im_start|>assistant\n` : 
-      sanitizedPrompt;
-    
     try {
-      const response = await axios({
-        method: 'POST',
-        url: `${this.baseUrl}/${model}`,
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        data: {
-          inputs: formattedPrompt,
-          parameters: {
-            max_new_tokens: params.maxTokens || 512,
-            temperature: params.temperature || 0.7,
-            return_full_text: false,
-            do_sample: true,
-            top_p: 0.95
+      // Use OpenAI-compatible client to call OpenRouter API
+      const completion = await this.client.chat.completions.create({
+        model: model,
+        messages: [
+          {
+            role: "user",
+            content: sanitizedPrompt
           }
-        },
-        timeout: 60000 // 60 second timeout
+        ],
+        temperature: params.temperature || 0.7,
+        max_tokens: params.maxTokens || 1024
       });
       
       this.handleSuccess();
       
       // Extract the generated text from the response
-      let generatedText = '';
-      
-      if (Array.isArray(response.data) && response.data.length > 0) {
-        generatedText = response.data[0].generated_text;
-      } else if (response.data && response.data.generated_text) {
-        generatedText = response.data.generated_text;
-      } else {
-        generatedText = JSON.stringify(response.data);
-      }
-      
-      // Clean up assistant tag if present
-      if (generatedText.includes('<|im_end|>')) {
-        generatedText = generatedText.split('<|im_end|>')[0];
-      }
+      const generatedText = completion.choices[0].message.content || '';
       
       const result: ProviderResponse = {
         success: true,
-        data: {
-          text: generatedText,
-          modelUsed: model
-        },
+        data: generatedText,
         provider: 'deepseek'
       };
       
       return result;
-    } catch (error) {
+    } catch (error: any) {
       this.handleFailure(error);
+      console.error("[DeepSeek Provider] Error:", error.message);
+      
+      // Check for rate limiting specifically
+      if (error.status === 429 || (error.message && error.message.includes('rate limit'))) {
+        return {
+          success: false,
+          error: {
+            message: 'Rate limit exceeded for DeepSeek provider',
+            code: 'rate_limit',
+            retryAfter: 60 // Default 60 second retry
+          },
+          provider: 'deepseek',
+          rateLimited: true
+        };
+      }
+      
       return this.sanitizeError(error, 'deepseek');
     }
   }

@@ -52,7 +52,7 @@ function createProvider(providerData: AiProvider): AIProvider | null {
       }
     }
     else if (providerNameLower.includes('deepseek')) {
-      apiKey = process.env.HUGGINGFACE_API_KEY; // DeepSeek uses HuggingFace API
+      apiKey = process.env.OPENROUTER_API_KEY; // DeepSeek now uses OpenRouter API
       if (apiKey) {
         return new DeepSeekProvider({ apiKey });
       }

@@ -104,8 +104,8 @@ export class MemStorage implements IStorage {
         dailyLimit: 200
       },
       {
-        name: "DeepSeek v3",
-        endpoint: "openrouter/deepseek-coder-v3",
+        name: "DeepSeek",
+        endpoint: "openrouter/deepseek-v3-base",
         status: "active",
         hourlyLimit: 30,
         dailyLimit: 100

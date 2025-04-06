@@ -44,7 +44,7 @@ export class DatabaseStorage implements IStorage {
         },
         {
           name: "deepseek",
-          endpoint: "deepseek-ai/deepseek-v3-base",
+          endpoint: "openrouter/deepseek-v3-base",
           status: "active",
           hourlyLimit: 50,
           dailyLimit: 200

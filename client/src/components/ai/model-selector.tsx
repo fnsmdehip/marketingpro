@@ -63,7 +63,7 @@ export function ModelSelector({
     text: [
       { name: "gemini-2.5-pro", provider: "Google" },
       { name: "gpt-4o", provider: "OpenAI" },
-      { name: "deepseek-v3", provider: "DeepSeek" },
+      { name: "deepseek/deepseek-v3-base:free", provider: "DeepSeek" },
     ],
     image: [
       { name: "stable-diffusion-xl", provider: "Stability AI" },

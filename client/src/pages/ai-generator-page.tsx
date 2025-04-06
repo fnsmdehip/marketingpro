@@ -36,7 +36,7 @@ export default function AIGeneratorPage() {
   const [activeTab, setActiveTab] = useState<GeneratorType>("text");
   
   // State for models
-  const [textModel, setTextModel] = useState("gemini-2.5-pro");
+  const [textModel, setTextModel] = useState("deepseek/deepseek-v3-base:free");
   const [imageModel, setImageModel] = useState("stable-diffusion-xl");
   const [speechModel, setSpeechModel] = useState("xtts-v2");
   const [videoModel, setVideoModel] = useState("damo-text-to-video");
