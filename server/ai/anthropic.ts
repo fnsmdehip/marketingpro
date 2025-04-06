@@ -1,4 +1,4 @@
-import axios from "axios";
+import Anthropic from '@anthropic-ai/sdk';
 import { 
   AIProvider, 
   ProviderRequestParams, 
@@ -7,41 +7,31 @@ import {
   ProviderTTSParams,
   ProviderVideoParams
 } from "./provider";
-import { OpenAI } from "openai";
 
-export class DeepSeekProvider extends AIProvider {
+export class AnthropicProvider extends AIProvider {
   private apiKey: string;
-  private baseUrl: string = "https://openrouter.ai/api/v1";
+  private client: Anthropic;
   private consecutiveFailures: number = 0;
   private circuitOpen: boolean = false;
   private lastErrorTime: number = 0;
   private circuitResetTimeout: number = 300000; // 5 minutes
-  private client: OpenAI;
   
-  // DeepSeek models available through OpenRouter
+  // Available Claude models - updated for 2025
+  // The newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
   private allowedModels = [
-    "deepseek/deepseek-v3-base:free",
-    "deepseek/deepseek-coder-v2-instruct",
-    "deepseek-ai/deepseek-v2",
-    "deepseek-ai/deepseek-v2-base",
-    "deepseek-ai/deepseek-coder-v2-base",
-    "deepseek-ai/deepseek-coder-v2",
-    "deepseek-ai/deepseek-math-v1",
-    "deepseek-ai/deepseek-v3-base",
-    "deepseek-ai/deepseek-llm-67b-chat"
+    "claude-3-7-sonnet-20250219", // latest model 
+    "claude-3-5-sonnet-20240229",
+    "claude-3-haiku-20240307",
+    "claude-3-opus-20240229",
+    "claude-2.1",
+    "claude-2.0"
   ];
 
   constructor(provider: { apiKey: string }) {
     super();
     this.apiKey = provider.apiKey;
-    // Initialize OpenAI client with OpenRouter base URL
-    this.client = new OpenAI({
-      baseURL: this.baseUrl,
+    this.client = new Anthropic({
       apiKey: this.apiKey,
-      defaultHeaders: {
-        "HTTP-Referer": "https://marketingsaasapp.replit.app",
-        "X-Title": "MarketingSaaS"
-      }
     });
   }
 
@@ -62,20 +52,26 @@ export class DeepSeekProvider extends AIProvider {
     return false;
   }
 
-  // Handle failures and potentially open circuit breaker
+  // Record failure and potentially open circuit breaker
   private handleFailure(error: any): void {
     this.consecutiveFailures++;
     this.lastErrorTime = Date.now();
     
-    // Open circuit breaker after threshold failures
-    if (this.consecutiveFailures >= 5) {
+    // After 3 consecutive failures, open the circuit
+    if (this.consecutiveFailures >= 3) {
       this.circuitOpen = true;
+      console.warn('[Anthropic Provider] Circuit breaker opened due to consecutive failures');
     }
+    
+    console.error('[Anthropic Provider] Error:', error);
   }
 
   // Reset failure count on success
   private handleSuccess(): void {
-    this.consecutiveFailures = 0;
+    if (this.consecutiveFailures > 0) {
+      this.consecutiveFailures = 0;
+      console.log('[Anthropic Provider] Consecutive failures reset after successful call');
+    }
   }
 
   // Validate model for security
@@ -94,12 +90,12 @@ export class DeepSeekProvider extends AIProvider {
           code: 'circuit_open',
           retryAfter: Math.floor(this.circuitResetTimeout / 1000)
         },
-        provider: 'deepseek'
+        provider: 'anthropic'
       };
     }
     
-    // Default model - DeepSeek v3 base free model from OpenRouter
-    const model = params.model || 'deepseek/deepseek-v3-base:free';
+    // Default to latest model
+    const model = params.model || 'claude-3-7-sonnet-20250219';
     
     // Validate model for security
     if (!this.validateModelSecurity(model)) {
@@ -109,7 +105,7 @@ export class DeepSeekProvider extends AIProvider {
           message: `Model "${model}" is not on the approved list for security reasons`,
           code: 'invalid_model'
         },
-        provider: 'deepseek'
+        provider: 'anthropic'
       };
     }
     
@@ -129,7 +125,7 @@ export class DeepSeekProvider extends AIProvider {
     
     // Add special instructions for marketing content to improve quality
     if (isMarketingContent) {
-      finalPrompt = `I need high-quality marketing content that's creative, persuasive, and engagement-driving. Please provide professional-grade content for: ${sanitizedPrompt}
+      finalPrompt = `I need high-quality marketing content that's creative, persuasive, and optimized for conversion. Please provide professional-grade content for: ${sanitizedPrompt}
       
       Follow these marketing best practices:
       - Focus on benefits over features
@@ -138,94 +134,101 @@ export class DeepSeekProvider extends AIProvider {
       - Consider the target audience demographics
       - Keep tone consistent with brand voice
       - Include clear calls to action
-      - Maintain professionalism and adherence to marketing standards`;
+      - Maintain professionalism and adherence to marketing ethics
+      - Format content appropriately for the target platform`;
     }
     
     try {
-      // Use OpenAI-compatible client to call OpenRouter API
-      const completion = await this.client.chat.completions.create({
+      const message = await this.client.messages.create({
         model: model,
+        max_tokens: params.maxTokens || 1024,
+        temperature: params.temperature || 0.7,
+        system: "You are an expert marketing content creator specializing in persuasive, high-converting copy that drives engagement and delivers business results. Create professional-grade content that's compelling and effective.",
         messages: [
           {
-            role: "system",
-            content: "You are an expert marketing content creator specializing in persuasive, high-converting copy that drives engagement and delivers business results."
-          },
-          {
-            role: "user",
+            role: 'user',
             content: finalPrompt
           }
-        ],
-        temperature: params.temperature || 0.7,
-        max_tokens: params.maxTokens || 1024
+        ]
       });
       
       this.handleSuccess();
       
       // Extract the generated text from the response
-      const generatedText = completion.choices[0].message.content || '';
+      // Handle different content types safely
+      let generatedText = '';
+      if (message.content && message.content.length > 0) {
+        const content = message.content[0];
+        if ('text' in content) {
+          generatedText = content.text || '';
+        } else if (typeof content === 'object' && content !== null) {
+          // Try to extract text from other content formats
+          generatedText = JSON.stringify(content);
+        }
+      }
       
       const result: ProviderResponse = {
         success: true,
         data: generatedText,
-        provider: 'deepseek'
+        provider: 'anthropic'
       };
       
       return result;
     } catch (error: any) {
       this.handleFailure(error);
-      console.error("[DeepSeek Provider] Error:", error.message);
+      console.error("[Anthropic Provider] Error:", error.message);
       
       // Check for rate limiting specifically
       if (error.status === 429 || (error.message && error.message.includes('rate limit'))) {
         return {
           success: false,
           error: {
-            message: 'Rate limit exceeded for DeepSeek provider',
+            message: 'Rate limit exceeded for Anthropic provider',
             code: 'rate_limit',
             retryAfter: 60 // Default 60 second retry
           },
-          provider: 'deepseek',
+          provider: 'anthropic',
           rateLimited: true
         };
       }
       
-      return this.sanitizeError(error, 'deepseek');
+      return this.sanitizeError(error, 'anthropic');
     }
   }
 
   async imageGeneration(params: ProviderImageParams): Promise<ProviderResponse> {
-    // DeepSeek via HuggingFace doesn't support image generation
+    // Claude doesn't directly support image generation yet
     return {
       success: false,
       error: {
         message: 'Image generation not supported by this provider',
         code: 'unsupported_operation'
       },
-      provider: 'deepseek'
+      provider: 'anthropic'
     };
   }
 
   async textToSpeech(params: ProviderTTSParams): Promise<ProviderResponse> {
-    // DeepSeek via HuggingFace doesn't support TTS
+    // Claude doesn't directly support TTS yet
     return {
       success: false,
       error: {
         message: 'Text-to-speech not supported by this provider',
         code: 'unsupported_operation'
       },
-      provider: 'deepseek'
+      provider: 'anthropic'
     };
   }
 
   async videoGeneration(params: ProviderVideoParams): Promise<ProviderResponse> {
-    // DeepSeek via HuggingFace doesn't support video generation
+    // Claude doesn't directly support video generation
     return {
       success: false,
       error: {
         message: 'Video generation not supported by this provider',
         code: 'unsupported_operation'
       },
-      provider: 'deepseek'
+      provider: 'anthropic'
     };
   }
 }

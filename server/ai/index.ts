@@ -16,6 +16,7 @@ import { OpenRouterProvider } from "./openrouter";
 import { GeminiProvider } from "./gemini";
 import { DeepSeekProvider } from "./deepseek";
 import { OpenAIProvider } from "./openai";
+import { AnthropicProvider } from "./anthropic";
 import { AiProvider } from "@shared/schema";
 import { storage } from "../storage";
 
@@ -61,6 +62,12 @@ function createProvider(providerData: AiProvider): AIProvider | null {
       apiKey = process.env.OPENAI_API_KEY;
       if (apiKey) {
         return new OpenAIProvider({ apiKey });
+      }
+    }
+    else if (providerNameLower.includes('anthropic') || providerNameLower.includes('claude')) {
+      apiKey = process.env.ANTHROPIC_API_KEY;
+      if (apiKey) {
+        return new AnthropicProvider({ apiKey });
       }
     }
     
@@ -126,13 +133,17 @@ export class AIManager {
         return this.providers.get('replicate') || null;
       } else if (preferredModel.startsWith('gpt-') || preferredModel.includes('dall-e') || preferredModel.startsWith('tts-')) {
         return this.providers.get('openai') || null;
+      } else if (preferredModel.startsWith('claude-') || preferredModel.includes('anthropic')) {
+        return this.providers.get('anthropic') || null;
       }
     }
     
     // If no model-specific provider found or no model specified, use fallback logic
     
     // Define capability maps for each request type
-    const textCapabilities: string[] = ['gemini', 'deepseek', 'openai', 'huggingface', 'openrouter'];
+    // DeepSeek is now first choice for text since it handles marketing content better,
+    // followed by Anthropic Claude which is also excellent for marketing
+    const textCapabilities: string[] = ['deepseek', 'anthropic', 'openai', 'gemini', 'huggingface', 'openrouter'];
     const imageCapabilities: string[] = ['openai', 'replicate', 'huggingface'];
     const ttsCapabilities: string[] = ['openai', 'huggingface'];
     const videoCapabilities: string[] = ['replicate'];
@@ -186,7 +197,39 @@ export class AIManager {
         };
       }
       
-      const provider = await this.selectProvider('text', params.model);
+      // Check if this is marketing-related content to optimize provider selection
+      let isMarketingContent = false;
+      if (params.prompt) {
+        const lowerPrompt = params.prompt.toLowerCase();
+        isMarketingContent = 
+          lowerPrompt.includes('marketing') || 
+          lowerPrompt.includes('advertisement') || 
+          lowerPrompt.includes('promote') || 
+          lowerPrompt.includes('sell') ||
+          lowerPrompt.includes('social media') ||
+          lowerPrompt.includes('campaign');
+      }
+      
+      // For marketing content, prefer DeepSeek or Claude (skip any preferred model)
+      let provider;
+      if (isMarketingContent) {
+        // Try to use DeepSeek first for marketing content
+        if (this.providers.has('deepseek')) {
+          provider = this.providers.get('deepseek');
+          console.log('[AI Manager] Marketing content detected, using DeepSeek');
+        }
+        // Fall back to Claude if DeepSeek is not available
+        else if (this.providers.has('anthropic')) {
+          provider = this.providers.get('anthropic');
+          console.log('[AI Manager] Marketing content detected, using Claude');
+        }
+        // If neither is available, use normal selection logic
+        else {
+          provider = await this.selectProvider('text', params.model);
+        }
+      } else {
+        provider = await this.selectProvider('text', params.model);
+      }
       
       if (!provider) {
         return {
