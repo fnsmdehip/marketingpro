@@ -23,7 +23,7 @@ export function ModelSelector({
   onTemperatureChange,
   disabled = false,
 }: ModelSelectorProps) {
-  const { data: providers = [] } = useQuery({
+  const { data: providers = [] } = useQuery<any[]>({
     queryKey: ["/api/ai/providers"],
   });
 
@@ -31,8 +31,8 @@ export function ModelSelector({
   const getAvailableModels = () => {
     const availableModels: { name: string; provider: string }[] = [];
 
-    providers.forEach((provider: any) => {
-      if (provider.status === "active" && provider.capabilities.includes(modelType)) {
+    (providers || []).forEach((provider: any) => {
+      if (provider?.status === "active" && provider?.capabilities && Array.isArray(provider.capabilities) && provider.capabilities.includes(modelType)) {
         if (modelType === "text" && provider.textModels) {
           provider.textModels.forEach((model: string) => {
             availableModels.push({ name: model, provider: provider.name });
@@ -95,7 +95,6 @@ export function ModelSelector({
         <div>
           <Label htmlFor="model-selector">AI Model</Label>
           <Select
-            id="model-selector"
             value={selectedModel}
             onValueChange={onSelectModel}
             disabled={disabled}

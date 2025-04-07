@@ -106,7 +106,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Execute Python script to scrape the website
-      const { spawnSync } = require('child_process');
+      // Using import.meta.require for ESM compatibility
+      const { spawnSync } = await import('child_process');
       const result = spawnSync('python', ['-c', `
 import sys
 import trafilatura
