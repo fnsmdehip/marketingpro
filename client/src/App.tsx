@@ -2,6 +2,8 @@ import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
@@ -28,20 +30,42 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/subscribe" component={SubscribePage} />
       
-      {/* Protected routes - These would normally be protected */}
-      <Route path="/dashboard" component={DashboardPage} />
-      <Route path="/ai-generator" component={AiGeneratorPage} />
-      <Route path="/content-calendar" component={ContentCalendarPage} />
-      <Route path="/content-studio" component={ContentStudioPage} />
-      <Route path="/analytics" component={AnalyticsPage} />
-      <Route path="/settings" component={SettingsPage} />
+      {/* Protected routes */}
+      <Route path="/dashboard">
+        <ProtectedRoute path="/dashboard" component={DashboardPage} />
+      </Route>
+      <Route path="/ai-generator">
+        <ProtectedRoute path="/ai-generator" component={AiGeneratorPage} />
+      </Route>
+      <Route path="/content-calendar">
+        <ProtectedRoute path="/content-calendar" component={ContentCalendarPage} />
+      </Route>
+      <Route path="/content-studio">
+        <ProtectedRoute path="/content-studio" component={ContentStudioPage} />
+      </Route>
+      <Route path="/analytics">
+        <ProtectedRoute path="/analytics" component={AnalyticsPage} />
+      </Route>
+      <Route path="/settings">
+        <ProtectedRoute path="/settings" component={SettingsPage} />
+      </Route>
       
       {/* Marketing tools */}
-      <Route path="/marketing/automation" component={AutomationPage} />
-      <Route path="/marketing/conversion-tactics" component={ConversionTacticsPage} />
-      <Route path="/marketing/growth-engines" component={GrowthEnginesPage} />
-      <Route path="/marketing/prompt-arsenal" component={PromptArsenalPage} />
-      <Route path="/marketing/web-scraper" component={WebScraperPage} />
+      <Route path="/marketing/automation">
+        <ProtectedRoute path="/marketing/automation" component={AutomationPage} />
+      </Route>
+      <Route path="/marketing/conversion-tactics">
+        <ProtectedRoute path="/marketing/conversion-tactics" component={ConversionTacticsPage} />
+      </Route>
+      <Route path="/marketing/growth-engines">
+        <ProtectedRoute path="/marketing/growth-engines" component={GrowthEnginesPage} />
+      </Route>
+      <Route path="/marketing/prompt-arsenal">
+        <ProtectedRoute path="/marketing/prompt-arsenal" component={PromptArsenalPage} />
+      </Route>
+      <Route path="/marketing/web-scraper">
+        <ProtectedRoute path="/marketing/web-scraper" component={WebScraperPage} />
+      </Route>
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />
@@ -52,8 +76,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <AuthProvider>
+        <Router />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
