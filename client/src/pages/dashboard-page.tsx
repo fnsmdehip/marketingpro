@@ -1,195 +1,182 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Image, Settings, BarChart2, Zap } from "lucide-react";
 import { Link } from "wouter";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { formatDate, formatNumber } from "@/lib/utils";
+import { BarChart3, Calendar, LineChart, PlusCircle, Zap } from "lucide-react";
 
 export default function DashboardPage() {
-  // Get user info directly from the API
-  const { data: user } = useQuery({
-    queryKey: ["/api/user"],
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Fetch analytics would go here
+  const { data: analyticsData } = useQuery({
+    queryKey: ["/api/analytics/summary"],
+    enabled: false, // Disabled until API is implemented
   });
-  
-  // Dashboard data
-  const { data: dashboardData, isLoading } = useQuery({
-    queryKey: ["/api/dashboard"],
-  });
+
+  // This would normally come from an API, but for development purposes:
+  const mockData = {
+    stats: [
+      { name: "Total Content", value: 24, change: "+12%", icon: <Zap className="h-4 w-4" /> },
+      { name: "Published", value: 18, change: "+8%", icon: <Calendar className="h-4 w-4" /> },
+      { name: "Engagement Rate", value: "3.2%", change: "+0.8%", icon: <BarChart3 className="h-4 w-4" /> },
+      { name: "Click-through Rate", value: "2.4%", change: "+0.6%", icon: <LineChart className="h-4 w-4" /> },
+    ],
+    upcomingContent: [
+      { id: 1, title: "Marketing Strategy Guide", platform: "Blog", scheduled: new Date(Date.now() + 86400000) },
+      { id: 2, title: "Product Launch Announcement", platform: "Twitter", scheduled: new Date(Date.now() + 172800000) },
+      { id: 3, title: "Industry Insights", platform: "LinkedIn", scheduled: new Date(Date.now() + 259200000) },
+    ],
+  };
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, {user?.fullName || user?.username}
-          </p>
-        </div>
-        <div className="mt-4 md:mt-0">
-          <Button asChild>
-            <Link href="/content-studio">
-              <Zap className="mr-2 h-4 w-4" /> Create Content
-            </Link>
-          </Button>
-        </div>
-      </div>
+    <DashboardLayout title="Dashboard">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="content">Content</TabsTrigger>
+        </TabsList>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Content Calendar</CardTitle>
-            <CardDescription>Upcoming scheduled content</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-32 flex items-center justify-center">
-                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-              </div>
-            ) : dashboardData?.upcomingContent?.length > 0 ? (
-              <ul className="space-y-2">
-                {dashboardData.upcomingContent.slice(0, 3).map((content: any) => (
-                  <li key={content.id} className="p-2 rounded-md border flex justify-between items-center">
-                    <div className="flex gap-3 items-center">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{content.title}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="mr-1 h-3 w-3" />
-                      {new Date(content.scheduledAt).toLocaleDateString()}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="h-32 flex flex-col items-center justify-center">
-                <p className="text-muted-foreground text-center mb-2">No upcoming content scheduled</p>
-                <Button variant="outline" size="sm" asChild>
+        <TabsContent value="overview" className="space-y-4">
+          {/* Stats Overview */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {mockData.stats.map((stat, i) => (
+              <Card key={i}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">{stat.name}</CardTitle>
+                  {stat.icon}
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <p className="text-xs text-muted-foreground">
+                    <span className={stat.change.startsWith("+") ? "text-green-500" : "text-red-500"}>
+                      {stat.change}
+                    </span>{" "}
+                    from last month
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Upcoming Content */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Upcoming Content</CardTitle>
+                <Button asChild size="sm">
                   <Link href="/content-calendar">
-                    <Calendar className="mr-2 h-4 w-4" /> Schedule Content
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Schedule Content
                   </Link>
                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+              <CardDescription>Your upcoming content across all platforms</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {mockData.upcomingContent.length > 0 ? (
+                <div className="space-y-4">
+                  {mockData.upcomingContent.map((content) => (
+                    <div key={content.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                      <div>
+                        <div className="font-medium">{content.title}</div>
+                        <div className="text-sm text-muted-foreground">{content.platform}</div>
+                      </div>
+                      <div className="text-sm">Scheduled for {formatDate(content.scheduled)}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-[140px] flex-col items-center justify-center rounded-md border border-dashed">
+                  <p className="text-sm text-muted-foreground">No upcoming content scheduled</p>
+                  <Button asChild variant="link" className="mt-2">
+                    <Link href="/content-calendar">Schedule your first content</Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Platform Connections</CardTitle>
-            <CardDescription>Your connected social platforms</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-32 flex items-center justify-center">
-                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-              </div>
-            ) : dashboardData?.platforms?.length > 0 ? (
-              <ul className="grid grid-cols-2 gap-2">
-                {dashboardData.platforms.map((platform: any) => (
-                  <li key={platform.id} className="p-2 rounded-md border flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      {platform.platform.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="font-medium">{platform.platform}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="h-32 flex flex-col items-center justify-center">
-                <p className="text-muted-foreground text-center mb-2">No platforms connected</p>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/settings">
-                    <Settings className="mr-2 h-4 w-4" /> Connect Platforms
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">AI Credits</CardTitle>
-            <CardDescription>Available AI generation credits</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-32 flex items-center justify-center">
-                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-              </div>
-            ) : dashboardData?.aiProviders ? (
-              <div className="space-y-3">
-                {(dashboardData?.aiProviders || []).slice(0, 3).map((provider: any) => (
-                  <div key={provider.name} className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">{provider.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {provider.usage?.daily || 0}/{provider.dailyLimit || 100}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary" 
-                        style={{ width: `${((provider.usage?.daily || 0) / (provider.dailyLimit || 100)) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" className="w-full" asChild>
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Frequently used tools and shortcuts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-3">
+                <Button asChild variant="outline" className="h-auto flex-col items-center justify-center p-6">
                   <Link href="/ai-generator">
-                    <Zap className="mr-2 h-4 w-4" /> Generate AI Content
+                    <Zap className="mb-2 h-6 w-6" />
+                    <div className="font-medium">Generate Content</div>
+                    <div className="text-xs text-muted-foreground mt-1">Create with AI</div>
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="h-auto flex-col items-center justify-center p-6">
+                  <Link href="/content-calendar">
+                    <Calendar className="mb-2 h-6 w-6" />
+                    <div className="font-medium">Content Calendar</div>
+                    <div className="text-xs text-muted-foreground mt-1">Schedule posts</div>
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="h-auto flex-col items-center justify-center p-6">
+                  <Link href="/analytics">
+                    <BarChart3 className="mb-2 h-6 w-6" />
+                    <div className="font-medium">Analytics</div>
+                    <div className="text-xs text-muted-foreground mt-1">Track performance</div>
                   </Link>
                 </Button>
               </div>
-            ) : (
-              <div className="h-32 flex flex-col items-center justify-center">
-                <p className="text-muted-foreground text-center mb-2">AI provider data not available</p>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/ai-generator">
-                    <Zap className="mr-2 h-4 w-4" /> Try AI Generator
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="md:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Quick Actions</CardTitle>
-            <CardDescription>Frequently used tools</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button variant="outline" className="h-24 flex flex-col gap-2" asChild>
-                <Link href="/content-calendar">
-                  <Calendar className="h-6 w-6" />
-                  <span>Calendar</span>
-                </Link>
-              </Button>
-              <Button variant="outline" className="h-24 flex flex-col gap-2" asChild>
-                <Link href="/content-studio">
-                  <Image className="h-6 w-6" />
-                  <span>Studio</span>
-                </Link>
-              </Button>
-              <Button variant="outline" className="h-24 flex flex-col gap-2" asChild>
-                <Link href="/ai-generator">
-                  <Zap className="h-6 w-6" />
-                  <span>AI Generator</span>
-                </Link>
-              </Button>
-              <Button variant="outline" className="h-24 flex flex-col gap-2" asChild>
-                <Link href="/analytics">
-                  <BarChart2 className="h-6 w-6" />
-                  <span>Analytics</span>
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <TabsContent value="analytics" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Analytics Summary</CardTitle>
+              <CardDescription>Performance metrics from the last 30 days</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px] flex items-center justify-center">
+              <div className="text-center">
+                <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Analytics Dashboard</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
+                  Detailed analytics and performance metrics will appear here once you have published content.
+                </p>
+                <Button asChild>
+                  <Link href="/analytics">View Full Analytics</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="content" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Content</CardTitle>
+              <CardDescription>Your recently created and published content</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px] flex items-center justify-center">
+              <div className="text-center">
+                <Calendar className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Content Library</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
+                  All your created content will appear here. Start by creating your first piece of content.
+                </p>
+                <Button asChild>
+                  <Link href="/content-studio">Create New Content</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </DashboardLayout>
   );
 }

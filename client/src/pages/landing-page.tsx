@@ -1,412 +1,478 @@
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Link, useLocation } from "wouter";
-import { ArrowRight, Zap, Calendar, BarChart2, Monitor, Stars } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, Sparkles, BarChart2, Zap, CheckCircle, ArrowRight } from "lucide-react";
 
 export default function LandingPage() {
-  // We'll just use a direct link to dashboard if user has an active session
-  const [, setLocation] = useLocation();
-
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Navigation */}
-      <header className="border-b">
-        <div className="container mx-auto py-4 px-6 flex justify-between items-center">
+    <div className="flex min-h-screen flex-col">
+      {/* Header */}
+      <header className="bg-background px-4 lg:px-6 border-b py-4">
+        <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Zap className="h-6 w-6 text-primary" />
             <span className="font-bold text-xl">Marketing Pro</span>
           </div>
-          <nav className="hidden md:flex space-x-6">
-            <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+          <nav className="hidden md:flex gap-6 items-center">
+            <Link href="#features" className="text-sm font-medium hover:text-primary">
               Features
-            </a>
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+            </Link>
+            <Link href="#pricing" className="text-sm font-medium hover:text-primary">
               Pricing
-            </a>
-            <a href="#testimonials" className="text-muted-foreground hover:text-foreground transition-colors">
+            </Link>
+            <Link href="#testimonials" className="text-sm font-medium hover:text-primary">
               Testimonials
-            </a>
+            </Link>
           </nav>
           <div className="flex items-center gap-4">
-            <Button variant="outline" asChild>
-              <Link href="/auth">Sign In</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/auth">Get Started</Link>
-            </Button>
+            <Link href="/auth">
+              <Button variant="outline">Log In</Button>
+            </Link>
+            <Link href="/auth?signup=true">
+              <Button>Sign Up</Button>
+            </Link>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-b from-background to-background/40 relative overflow-hidden">
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="max-w-3xl mx-auto text-center mb-12">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
-              Your Marketing Arsenal in One Place
-            </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8">
-              AI-powered tools, Content Calendar, UGC generation, Analytics, and more
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild>
-                <Link href="/auth">
-                  Start for Free <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+      <section className="py-16 md:py-24 bg-gradient-to-b from-background to-muted/30">
+        <div className="container mx-auto px-4 md:px-6 text-center">
+          <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm font-medium text-primary mb-4">
+            All-in-one Marketing Solution
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+            Your Marketing Arsenal, <span className="text-primary">Powered by AI</span>
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+            Revolutionize your marketing strategy with our all-in-one platform. Create, schedule, analyze, and optimize your content with powerful AI tools.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
+            <Link href="/auth?signup=true">
+              <Button size="lg" className="w-full sm:w-auto">
+                Get Started
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline">
-                Watch Demo
+            </Link>
+            <Link href="#features">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                Learn More
               </Button>
+            </Link>
+          </div>
+          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-xl border bg-background shadow-lg">
+            {/* Dashboard Preview Image would go here */}
+            <div className="aspect-[16/9] bg-gradient-to-tr from-muted to-muted/50 flex items-center justify-center p-8">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold mb-2">Powerful Dashboard</h3>
+                <p className="text-muted-foreground">
+                  All your marketing tools and analytics in one place
+                </p>
+              </div>
             </div>
           </div>
-
-          {/* Decorative Elements */}
-          <div className="hidden md:block absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-primary/5"></div>
-          <div className="hidden md:block absolute top-10 -right-10 w-40 h-40 rounded-full bg-primary/10"></div>
         </div>
       </section>
 
-      {/* Features */}
-      <section id="features" className="py-20 bg-background">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Powerful Marketing Tools</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+      {/* Features Section */}
+      <section id="features" className="py-16 md:py-24 bg-background">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Comprehensive Marketing Tools</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Everything you need to create, manage, and optimize your marketing campaigns
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="p-6 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <Calendar className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Content Calendar</h3>
-              <p className="text-muted-foreground">
-                Schedule and manage your content across multiple platforms with ease
-              </p>
-            </div>
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="space-y-1">
+                <Sparkles className="h-8 w-8 text-primary mb-2" />
+                <CardTitle>AI Generator</CardTitle>
+                <CardDescription>
+                  Create marketing content with advanced AI tools
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Copy for ads, emails, & social</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Blog posts & articles</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Product descriptions</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
 
-            <div className="p-6 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <Zap className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">AI Generator</h3>
-              <p className="text-muted-foreground">
-                Create high-quality content with our intelligent AI tools
-              </p>
-            </div>
+            <Card>
+              <CardHeader className="space-y-1">
+                <Calendar className="h-8 w-8 text-primary mb-2" />
+                <CardTitle>Content Calendar</CardTitle>
+                <CardDescription>
+                  Schedule and manage your content publishing
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Visual content calendar</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Automated publishing</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Team collaboration</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
 
-            <div className="p-6 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <BarChart2 className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Analytics</h3>
-              <p className="text-muted-foreground">
-                Track performance metrics and optimize your marketing strategies
-              </p>
-            </div>
+            <Card>
+              <CardHeader className="space-y-1">
+                <BarChart2 className="h-8 w-8 text-primary mb-2" />
+                <CardTitle>Analytics</CardTitle>
+                <CardDescription>
+                  Track and measure your marketing performance
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Performance metrics</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Audience insights</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Conversion tracking</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
 
-            <div className="p-6 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <Monitor className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2">UGC Creation</h3>
-              <p className="text-muted-foreground">
-                Generate user-generated content that drives engagement and conversions
-              </p>
-            </div>
+            <Card>
+              <CardHeader className="space-y-1">
+                <Zap className="h-8 w-8 text-primary mb-2" />
+                <CardTitle>Marketing Tools</CardTitle>
+                <CardDescription>
+                  Advanced tools to optimize your campaigns
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Conversion tactics</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Growth engines</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                    <span>Prompt arsenal</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="py-20 bg-muted/30">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Choose a plan that works best for your marketing needs
+      {/* Pricing Section */}
+      <section id="pricing" className="py-16 md:py-24 bg-muted/30">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Choose the plan that fits your needs. All plans include full access to our core features.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <div className="rounded-lg border bg-card p-8">
-              <h3 className="text-xl font-semibold mb-2">Starter</h3>
-              <div className="mb-4">
-                <span className="text-3xl font-bold">$0</span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-              <p className="text-muted-foreground mb-6">Perfect for individuals and small projects</p>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Content calendar
-                </li>
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Basic AI generation
-                </li>
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  2 connected platforms
-                </li>
-              </ul>
-              <Button className="w-full" variant="outline" asChild>
-                <Link href="/auth">Sign Up Free</Link>
-              </Button>
-            </div>
+          <div className="grid gap-8 md:grid-cols-3 lg:max-w-5xl lg:mx-auto">
+            {/* Starter Plan */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Starter Plan</CardTitle>
+                <div className="mt-4 flex items-baseline">
+                  <span className="text-3xl font-bold">$29</span>
+                  <span className="ml-1 text-muted-foreground">/month</span>
+                </div>
+                <CardDescription className="mt-4">
+                  Perfect for individuals and small businesses just getting started.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>10,000 AI words per month</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>50 social media posts</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>Basic analytics</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>1 user</span>
+                  </li>
+                </ul>
+                <Link href="/auth?signup=true&plan=starter" className="mt-6 block">
+                  <Button className="w-full">Get Started</Button>
+                </Link>
+              </CardContent>
+            </Card>
 
-            <div className="rounded-lg border bg-card p-8 shadow-lg relative">
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
-                Most Popular
+            {/* Professional Plan */}
+            <Card className="border-primary relative">
+              <div className="absolute -top-5 left-0 right-0 flex justify-center">
+                <span className="bg-primary text-primary-foreground text-sm font-medium py-1 px-3 rounded">Most Popular</span>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Pro</h3>
-              <div className="mb-4">
-                <span className="text-3xl font-bold">$29</span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-              <p className="text-muted-foreground mb-6">Ideal for growing businesses and marketers</p>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Advanced content calendar
-                </li>
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Full AI generation capabilities
-                </li>
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  10 connected platforms
-                </li>
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Advanced analytics
-                </li>
-              </ul>
-              <Button className="w-full" asChild>
-                <Link href="/auth">Get Started</Link>
-              </Button>
-            </div>
+              <CardHeader>
+                <CardTitle>Professional Plan</CardTitle>
+                <div className="mt-4 flex items-baseline">
+                  <span className="text-3xl font-bold">$79</span>
+                  <span className="ml-1 text-muted-foreground">/month</span>
+                </div>
+                <CardDescription className="mt-4">
+                  Ideal for growing businesses and marketing teams.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>50,000 AI words per month</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>200 social media posts</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>Advanced analytics & reporting</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>3 team members</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>Premium marketing templates</span>
+                  </li>
+                </ul>
+                <Link href="/auth?signup=true&plan=professional" className="mt-6 block">
+                  <Button className="w-full">Get Started</Button>
+                </Link>
+              </CardContent>
+            </Card>
 
-            <div className="rounded-lg border bg-card p-8">
-              <h3 className="text-xl font-semibold mb-2">Enterprise</h3>
-              <div className="mb-4">
-                <span className="text-3xl font-bold">$99</span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-              <p className="text-muted-foreground mb-6">For larger teams and organizations</p>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Everything in Pro
-                </li>
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Priority support
-                </li>
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Unlimited platforms
-                </li>
-                <li className="flex items-center">
-                  <svg className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Custom AI model training
-                </li>
-              </ul>
-              <Button className="w-full" variant="outline" asChild>
-                <Link href="/auth">Contact Sales</Link>
-              </Button>
-            </div>
+            {/* Enterprise Plan */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Enterprise Plan</CardTitle>
+                <div className="mt-4 flex items-baseline">
+                  <span className="text-3xl font-bold">Custom</span>
+                </div>
+                <CardDescription className="mt-4">
+                  For larger organizations with custom requirements.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>Unlimited AI content generation</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>Unlimited social media management</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>Custom analytics dashboards</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>Unlimited team members</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="mr-2 h-4 w-4 text-primary mt-0.5" />
+                    <span>Dedicated account manager</span>
+                  </li>
+                </ul>
+                <Link href="mailto:sales@marketingpro.ai" className="mt-6 block">
+                  <Button variant="outline" className="w-full">Contact Sales</Button>
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section id="testimonials" className="py-20 bg-background">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">What Our Customers Say</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Hear from the marketers who use our platform every day
+      {/* Testimonials Section */}
+      <section id="testimonials" className="py-16 md:py-24 bg-background">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Customers Say</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Don't just take our word for it, hear from our satisfied customers
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-6 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <div className="flex items-center mb-4">
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-              </div>
-              <p className="text-muted-foreground mb-6">
-                "Marketing Pro has completely transformed how we manage our social media content. The AI tools save us hours every week."
-              </p>
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary mr-3">
-                  S
+          <div className="grid gap-8 md:grid-cols-3">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col h-full">
+                  <div className="mb-4">
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Zap key={i} className="h-5 w-5 fill-primary text-primary" />
+                      ))}
+                    </div>
+                  </div>
+                  <blockquote className="flex-1">
+                    <p className="text-muted-foreground">
+                      "Marketing Pro has transformed how we approach content creation. The AI tools save us hours every week, and the analytics help us understand what's working."
+                    </p>
+                  </blockquote>
+                  <div className="mt-6 pt-6 border-t">
+                    <div className="font-medium">Sarah Johnson</div>
+                    <div className="text-sm text-muted-foreground">Marketing Director, TechStart</div>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">Sarah J.</p>
-                  <p className="text-sm text-muted-foreground">Social Media Manager</p>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="p-6 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <div className="flex items-center mb-4">
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-              </div>
-              <p className="text-muted-foreground mb-6">
-                "The analytics dashboard gives us insights we never had before. We can now make data-driven decisions for our campaigns."
-              </p>
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary mr-3">
-                  M
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col h-full">
+                  <div className="mb-4">
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Zap key={i} className="h-5 w-5 fill-primary text-primary" />
+                      ))}
+                    </div>
+                  </div>
+                  <blockquote className="flex-1">
+                    <p className="text-muted-foreground">
+                      "The content calendar feature is a game-changer. We've increased our social media engagement by 200% since adopting Marketing Pro for our agency."
+                    </p>
+                  </blockquote>
+                  <div className="mt-6 pt-6 border-t">
+                    <div className="font-medium">James Wilson</div>
+                    <div className="text-sm text-muted-foreground">Founder, Creative Spark Agency</div>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">Michael T.</p>
-                  <p className="text-sm text-muted-foreground">Marketing Director</p>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="p-6 rounded-lg border bg-card hover:shadow-md transition-shadow">
-              <div className="flex items-center mb-4">
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-                <Stars className="h-5 w-5 text-primary" />
-              </div>
-              <p className="text-muted-foreground mb-6">
-                "The UGC generation tools helped us increase our engagement rates by 250%. Our customers love the content we create now."
-              </p>
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary mr-3">
-                  L
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col h-full">
+                  <div className="mb-4">
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Zap key={i} className="h-5 w-5 fill-primary text-primary" />
+                      ))}
+                    </div>
+                  </div>
+                  <blockquote className="flex-1">
+                    <p className="text-muted-foreground">
+                      "As a small business owner, I was overwhelmed with marketing. Marketing Pro's arsenal of tools and resources makes it easy to compete with larger brands."
+                    </p>
+                  </blockquote>
+                  <div className="mt-6 pt-6 border-t">
+                    <div className="font-medium">Emily Chen</div>
+                    <div className="text-sm text-muted-foreground">Owner, Artisan Bakery</div>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">Laura K.</p>
-                  <p className="text-sm text-muted-foreground">Content Strategist</p>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20 bg-primary text-primary-foreground">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Marketing?</h2>
-          <p className="text-xl max-w-2xl mx-auto mb-8 text-primary-foreground/80">
-            Join thousands of marketers who have already upgraded their marketing arsenal
+      {/* CTA Section */}
+      <section className="py-16 md:py-24 bg-primary text-primary-foreground">
+        <div className="container mx-auto px-4 md:px-6 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Your Marketing?</h2>
+          <p className="text-xl opacity-90 max-w-3xl mx-auto mb-8">
+            Join thousands of businesses using Marketing Pro to reach their audience, engage customers, and grow their business.
           </p>
-          <Button size="lg" variant="secondary" asChild>
-            <Link href="/auth">
-              Start Your Free Trial <ArrowRight className="ml-2 h-4 w-4" />
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link href="/auth?signup=true">
+              <Button size="lg" variant="secondary" className="w-full sm:w-auto">
+                Get Started For Free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </Link>
-          </Button>
+            <Link href="#pricing">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto border-primary-foreground/20 hover:bg-primary-foreground/10">
+                View Pricing
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-muted/30 border-t">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+      <footer className="bg-background border-t py-12 px-4 md:px-6">
+        <div className="container mx-auto">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Zap className="h-6 w-6 text-primary" />
                 <span className="font-bold text-xl">Marketing Pro</span>
               </div>
               <p className="text-muted-foreground">
-                The all-in-one platform for your marketing needs
+                Your all-in-one marketing solution powered by AI.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Product</h3>
+              <h3 className="font-medium mb-4">Product</h3>
               <ul className="space-y-2">
-                <li>
-                  <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Features
-                  </a>
-                </li>
-                <li>
-                  <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Pricing
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Integrations
-                  </a>
-                </li>
+                <li><Link href="#features" className="text-muted-foreground hover:text-foreground">Features</Link></li>
+                <li><Link href="#pricing" className="text-muted-foreground hover:text-foreground">Pricing</Link></li>
+                <li><Link href="#testimonials" className="text-muted-foreground hover:text-foreground">Testimonials</Link></li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Resources</h3>
+              <h3 className="font-medium mb-4">Company</h3>
               <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Documentation
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Blog
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Tutorials
-                  </a>
-                </li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground">About Us</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground">Careers</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground">Contact</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Company</h3>
+              <h3 className="font-medium mb-4">Legal</h3>
               <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    About Us
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Careers
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Contact
-                  </a>
-                </li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground">Privacy Policy</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground">Terms of Service</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground">Cookie Policy</a></li>
               </ul>
             </div>
           </div>
-          <div className="pt-8 border-t text-center text-muted-foreground">
-            <p>© {new Date().getFullYear()} Marketing Pro. All rights reserved.</p>
+          <div className="mt-12 pt-8 border-t text-center text-muted-foreground text-sm">
+            <p>© 2025 Marketing Pro. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -1,28 +1,23 @@
 import { Switch, Route } from "wouter";
-import { ProtectedRoute } from "./lib/protected-route";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-
-// Pages
+import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
+import AiGeneratorPage from "@/pages/ai-generator-page";
 import ContentCalendarPage from "@/pages/content-calendar-page";
 import ContentStudioPage from "@/pages/content-studio-page";
-import AIGeneratorPage from "@/pages/ai-generator-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import SettingsPage from "@/pages/settings-page";
 import SubscribePage from "@/pages/subscribe-page";
-import NotFound from "@/pages/not-found";
 
-// Create a client
-const queryClient = new QueryClient();
-
-// Marketing Tools Pages (commented out until implemented)
-// import ConversionTactics from "@/pages/marketing-tools/conversion-tactics";
-// import GrowthEngines from "@/pages/marketing-tools/growth-engines";
-// import Automation from "@/pages/marketing-tools/automation";
-// import PromptArsenal from "@/pages/marketing-tools/prompt-arsenal";
+// Marketing tools
+import AutomationPage from "@/pages/marketing-tools/automation";
+import ConversionTacticsPage from "@/pages/marketing-tools/conversion-tactics";
+import GrowthEnginesPage from "@/pages/marketing-tools/growth-engines";
+import PromptArsenalPage from "@/pages/marketing-tools/prompt-arsenal";
 
 function Router() {
   return (
@@ -30,45 +25,23 @@ function Router() {
       {/* Public routes */}
       <Route path="/" component={LandingPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/subscribe" component={SubscribePage} />
       
-      {/* Protected routes */}
-      <Route path="/dashboard">
-        <DashboardPage />
-      </Route>
-      <Route path="/content-calendar">
-        <ContentCalendarPage />
-      </Route>
-      <Route path="/content-studio">
-        <ContentStudioPage />
-      </Route>
-      <Route path="/ai-generator">
-        <AIGeneratorPage />
-      </Route>
-      <Route path="/analytics">
-        <AnalyticsPage />
-      </Route>
-      <Route path="/settings">
-        <SettingsPage />
-      </Route>
-      <Route path="/subscribe">
-        <SubscribePage />
-      </Route>
+      {/* Protected routes - These would normally be protected */}
+      <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/ai-generator" component={AiGeneratorPage} />
+      <Route path="/content-calendar" component={ContentCalendarPage} />
+      <Route path="/content-studio" component={ContentStudioPage} />
+      <Route path="/analytics" component={AnalyticsPage} />
+      <Route path="/settings" component={SettingsPage} />
       
-      {/* Marketing Tools (will implement these later) */}
-      {/* <Route path="/marketing-tools/conversion-tactics">
-        <ConversionTactics />
-      </Route>
-      <Route path="/marketing-tools/growth-engines">
-        <GrowthEngines />
-      </Route>
-      <Route path="/marketing-tools/automation">
-        <Automation />
-      </Route>
-      <Route path="/marketing-tools/prompt-arsenal">
-        <PromptArsenal />
-      </Route> */}
+      {/* Marketing tools */}
+      <Route path="/marketing/automation" component={AutomationPage} />
+      <Route path="/marketing/conversion-tactics" component={ConversionTacticsPage} />
+      <Route path="/marketing/growth-engines" component={GrowthEnginesPage} />
+      <Route path="/marketing/prompt-arsenal" component={PromptArsenalPage} />
       
-      {/* Fallback 404 */}
+      {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
   );

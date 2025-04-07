@@ -11,11 +11,9 @@ import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 // Make sure to call loadStripe outside of a component's render to avoid
 // recreating the Stripe object on every render
-if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
-  throw new Error("Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY");
-}
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+// Only load Stripe if the public key is available
+const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 // The checkout form component
 const CheckoutForm = ({ priceId, planName }: { priceId: string, planName: string }) => {
@@ -247,13 +245,22 @@ export default function SubscribePage() {
                       <Button onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
                     </div>
                   </div>
-                ) : clientSecret ? (
+                ) : clientSecret && stripePromise ? (
                   <Elements stripe={stripePromise} options={{ clientSecret }}>
                     <CheckoutForm 
                       priceId={selectedPlan.priceId} 
                       planName={selectedPlan.name}
                     />
                   </Elements>
+                ) : clientSecret && !stripePromise ? (
+                  <div className="h-60 flex items-center justify-center">
+                    <div className="text-center">
+                      <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Stripe Not Configured</h3>
+                      <p className="text-gray-500 mb-4">Payment processing is not available at this time. Please try again later.</p>
+                      <Button onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
+                    </div>
+                  </div>
                 ) : null}
               </div>
             </div>

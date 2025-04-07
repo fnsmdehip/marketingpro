@@ -7,7 +7,9 @@ if (!process.env.STRIPE_SECRET_KEY) {
   console.warn("Warning: STRIPE_SECRET_KEY is not set. Payment functionality will not work correctly.");
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+// Use a dummy key for development if none is provided
+const dummyKey = "sk_test_dummy_key_for_development_only";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || dummyKey, {
   apiVersion: "2023-10-16" as any,
 });
 
