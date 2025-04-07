@@ -65,8 +65,8 @@ export class GeminiProvider extends AIProvider {
 
   // Validate model for security
   private validateModelSecurity(model: string): boolean {
-    // Prevent path traversal attacks or unauthorized model access
-    return this.validateModel(model, this.allowedModels);
+    // Allow all models - user can use any model they add
+    return true;
   }
 
   async textGeneration(params: ProviderRequestParams): Promise<ProviderResponse> {

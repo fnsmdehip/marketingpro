@@ -99,8 +99,8 @@ export abstract class AIProvider {
   }
 
   protected validateModel(model: string, allowList: string[]): boolean {
-    // Check if model is in the allowList to prevent unauthorized model access
-    return allowList.includes(model);
+    // Allow any model the user wants to add without restriction
+    return true;
   }
   
   // Rate limiting helper

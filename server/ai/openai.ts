@@ -5,14 +5,18 @@ export class OpenAIProvider extends AIProvider {
   private client: OpenAI;
   private rateLimitBackoff: number = 0;
   
-  // Supported models
+  // Supported models - now allowing all models as per user request
   private allowedModels = [
-    'gpt-3.5-turbo',    // Base model for text generation
+    'gpt-3.5-turbo',     // Base model for text generation
     'gpt-3.5-turbo-16k', // Extended context model
-    'text-ada-001',     // Lightweight model
-    'dall-e-2',         // Image generation model
-    'tts-1'             // Text-to-speech model
-    // Higher tier models like gpt-4o and gpt-4 would be enabled based on project requirements
+    'gpt-4o',            // Latest GPT-4o model
+    'gpt-4',             // GPT-4 model
+    'gpt-4-turbo',       // GPT-4 Turbo model
+    'text-ada-001',      // Lightweight model
+    'dall-e-2',          // Image generation model
+    'dall-e-3',          // Advanced image generation model
+    'tts-1',             // Text-to-speech model
+    'tts-1-hd'           // High-definition TTS model
   ];
   
   constructor(provider: { apiKey: string }) {
