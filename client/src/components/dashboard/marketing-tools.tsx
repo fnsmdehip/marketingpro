@@ -5,36 +5,43 @@ import {
   CardHeader,
   CardTitle 
 } from "@/components/ui/card";
-import { MessageSquare, TrendingUp, Box, Sparkles } from "lucide-react";
+import { MessageSquare, TrendingUp, Box, Sparkles, BarChart } from "lucide-react";
 
 const tools = [
   {
     icon: MessageSquare,
     name: "Conversion Tactics",
     description: "Psychological triggers for better CTAs",
-    href: "/marketing-tools/conversion-tactics",
+    href: "/marketing/conversion-tactics",
     color: "text-primary-600"
   },
   {
     icon: TrendingUp,
     name: "Growth Engines",
     description: "Platform-specific growth strategies",
-    href: "/marketing-tools/growth-engines",
+    href: "/marketing/growth-engines",
     color: "text-secondary-600"
   },
   {
     icon: Box,
     name: "Automation",
     description: "Build sophisticated automation workflows",
-    href: "/marketing-tools/automation",
+    href: "/marketing/automation",
     color: "text-accent-600"
   },
   {
     icon: Sparkles,
     name: "Prompt Arsenal",
     description: "Ready-to-use AI prompts library",
-    href: "/marketing-tools/prompt-arsenal",
+    href: "/marketing/prompt-arsenal",
     color: "text-amber-600"
+  },
+  {
+    icon: BarChart,
+    name: "Analytics Dashboard",
+    description: "Marketing funnel and conversion metrics",
+    href: "/marketing/analytics",
+    color: "text-blue-600"
   }
 ];
 

@@ -14,6 +14,7 @@ import ContentStudioPage from "@/pages/content-studio-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import SettingsPage from "@/pages/settings-page";
 import SubscribePage from "@/pages/subscribe-page";
+import MarketingAnalyticsPage from "@/pages/marketing-analytics";
 
 // Marketing tools
 import AutomationPage from "@/pages/marketing-tools/automation";
@@ -69,6 +70,9 @@ function Router() {
       </Route>
       <Route path="/marketing/content-research">
         <ProtectedRoute path="/marketing/content-research" component={ContentResearchPage} />
+      </Route>
+      <Route path="/marketing/analytics">
+        <ProtectedRoute path="/marketing/analytics" component={MarketingAnalyticsPage} />
       </Route>
       
       {/* Fallback to 404 */}
