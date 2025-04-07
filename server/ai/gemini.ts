@@ -18,10 +18,10 @@ export class GeminiProvider extends AIProvider {
   
   // Available models (2.5 is the latest and best)
   private allowedModels = [
-    "gemini-1.5-pro",
-    "gemini-1.5-flash",
-    "gemini-pro",
-    "gemini-pro-vision"
+    "gemini-flash", // Basic fast model
+    "gemini-1.0-pro-vision", // Original vision model
+    "gemini-1.0-pro", // Original pro model
+    // Higher quality Gemini 1.5 models would be enabled based on project requirements
   ];
 
   constructor(provider: { apiKey: string }) {

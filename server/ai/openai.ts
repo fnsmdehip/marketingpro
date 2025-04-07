@@ -7,13 +7,12 @@ export class OpenAIProvider extends AIProvider {
   
   // Supported models
   private allowedModels = [
-    'gpt-4o',      // The newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-    'gpt-4',
-    'gpt-3.5-turbo',
-    'dall-e-3',
-    'dall-e-2',
-    'tts-1',
-    'tts-1-hd'
+    'gpt-3.5-turbo',    // Base model for text generation
+    'gpt-3.5-turbo-16k', // Extended context model
+    'text-ada-001',     // Lightweight model
+    'dall-e-2',         // Image generation model
+    'tts-1'             // Text-to-speech model
+    // Higher tier models like gpt-4o and gpt-4 would be enabled based on project requirements
   ];
   
   constructor(provider: { apiKey: string }) {
@@ -42,13 +41,15 @@ export class OpenAIProvider extends AIProvider {
       // Sanitize input for security
       const sanitizedPrompt = this.sanitizeInput(params.prompt);
       
-      // Default to gpt-4o if no model specified or validate the model
-      const model = params.model || 'gpt-4o';
-      if (!this.allowedModels.includes(model) && !model.startsWith('gpt-')) {
+      // Default to gpt-3.5-turbo if no model specified
+      const model = params.model || 'gpt-3.5-turbo';
+      
+      // Strict model validation
+      if (!this.validateModel(model, this.allowedModels)) {
         return {
           success: false,
           error: {
-            message: `Model "${model}" is not supported by OpenAI provider`,
+            message: `Model "${model}" is not on the approved list for security reasons`,
             code: 'invalid_model'
           },
           provider: 'OpenAI'
@@ -132,8 +133,20 @@ export class OpenAIProvider extends AIProvider {
       // Sanitize input for security
       const sanitizedPrompt = this.sanitizeInput(params.prompt);
       
-      // Determine the model (DALL-E 2 or 3)
-      const model = params.model && params.model.includes('dall-e-3') ? 'dall-e-3' : 'dall-e-2';
+      // Determine the model and validate
+      const model = params.model || 'dall-e-2';
+      
+      // Strict model validation
+      if (!this.validateModel(model, this.allowedModels)) {
+        return {
+          success: false,
+          error: {
+            message: `Model "${model}" is not on the approved list for security reasons`,
+            code: 'invalid_model'
+          },
+          provider: 'OpenAI'
+        };
+      }
       
       // Set quality and style for DALL-E 3
       const quality = model === 'dall-e-3' ? 'standard' : undefined;
@@ -248,8 +261,20 @@ export class OpenAIProvider extends AIProvider {
       // Sanitize input for security
       const sanitizedText = this.sanitizeInput(params.text);
       
-      // Determine the model (tts-1 or tts-1-hd)
-      const model = params.model && params.model.includes('hd') ? 'tts-1-hd' : 'tts-1';
+      // Determine the model (only tts-1 in our allowed list)
+      const model = params.model || 'tts-1';
+      
+      // Strict model validation
+      if (!this.validateModel(model, this.allowedModels)) {
+        return {
+          success: false,
+          error: {
+            message: `Model "${model}" is not on the approved list for security reasons`,
+            code: 'invalid_model'
+          },
+          provider: 'OpenAI'
+        };
+      }
       
       // Determine voice
       const voice = params.voice || 'alloy'; // OpenAI voices: alloy, echo, fable, onyx, nova, and shimmer
