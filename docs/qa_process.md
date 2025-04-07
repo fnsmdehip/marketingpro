@@ -40,6 +40,45 @@ This document outlines the comprehensive quality assurance process for the Marke
    - Verify true data protection
    - Monitor real security threats
 
+## Manual Testing Procedures
+
+### Content Generation Testing
+1. Direct Input Testing
+   - Manually input marketing copy samples
+   - Test different prompt variations
+   - Verify output quality against requirements
+   - Test content export in various formats
+
+2. Social Media Testing
+   - Manually connect test social accounts
+   - Create and schedule test posts
+   - Verify post previews on each platform
+   - Test timezone handling with different schedules
+
+3. Analytics Testing
+   - Import sample analytics data files
+   - Enter test engagement metrics
+   - Verify calculation accuracy manually
+   - Cross-check dashboard displays
+
+4. Content Calendar Testing
+   - Create test campaign schedules
+   - Input various event types
+   - Test conflict detection manually
+   - Verify timezone conversions
+
+5. Performance Testing
+   - Monitor response times during usage
+   - Test with different data volumes
+   - Verify resource usage manually
+   - Check scalability with increased load
+
+6. Security Testing
+   - Test login/logout flows
+   - Verify permission boundaries
+   - Test API key security manually
+   - Validate data protection
+
 ## Testing Types
 
 ### Functional Testing

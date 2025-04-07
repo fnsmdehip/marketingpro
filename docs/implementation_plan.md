@@ -74,6 +74,38 @@ This document outlines the detailed implementation plan for the Marketing Pro Sa
    - Verify session management
    - Test permission boundaries
 
+## Manual Testing Instructions
+
+### AI Content Generation
+1. Test Data:
+   - Use real marketing materials (PDFs, docs)
+   - Import actual social media posts
+   - Test with various content types
+
+2. Platform Integration
+   - Use test social media accounts
+   - Create test posts manually
+   - Verify scheduling across timezones
+   - Check post format accuracy
+
+3. Analytics Verification
+   - Input test metrics manually
+   - Compare calculated vs expected results
+   - Verify report generation
+   - Test data visualizations
+
+4. Content Calendar
+   - Create test schedules
+   - Input various event types
+   - Test timezone handling
+   - Verify scheduling conflicts
+
+5. Security Features
+   - Test user permissions
+   - Verify data access controls
+   - Check API key handling
+   - Test authentication flows
+
 ## Tech Stack
 
 ### Frontend
