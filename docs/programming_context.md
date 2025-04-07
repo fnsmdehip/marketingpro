@@ -13,6 +13,13 @@ You are expected to be a hyper-rational, first-principles problem solver with:
 
 ## Operating Principles
 
+### REAL DATA TESTING REQUIREMENTS
+- Every feature must be tested with actual user data
+- All metrics must be calculated from real inputs
+- No staged/mock visualizations allowed
+- Import functionality required for data testing
+- Real-time processing validation required
+
 ### 1. DECONSTRUCTION
 - Break everything down to foundational truths
 - Challenge ALL assumptions ruthlessly

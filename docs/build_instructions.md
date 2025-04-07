@@ -17,6 +17,14 @@ This document provides clear instructions on how to use the core documentation f
 
 ## Build Process Instructions
 
+### Important Note on Testing
+**CRITICAL**: All features must be testable with real data and actual functionality. No staged metrics, mock visualizations, or dummy data are acceptable. Each feature must be tested with:
+- User-imported data
+- Real-time input testing
+- Actual data processing
+- Live metric calculations
+- Real-world workflow validation
+
 ### Step 1: Comprehensive Reading and Understanding
 
 Before writing any code:
