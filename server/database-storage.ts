@@ -163,7 +163,19 @@ export class DatabaseStorage implements IStorage {
 
   async createContent(insertContent: InsertContent): Promise<Content> {
     try {
-      const preparedContent = { ...insertContent };
+      // Prepare the content with defaults
+      const preparedContent: any = {
+        userId: insertContent.userId,
+        title: insertContent.title,
+        body: insertContent.body || '',
+        contentType: insertContent.contentType || 'social',
+        status: insertContent.status || 'draft',
+        scheduledDate: insertContent.scheduledDate || null,
+        platforms: insertContent.platforms || [],
+        mediaUrls: insertContent.mediaUrls || [],
+        metadata: insertContent.metadata || {}
+      };
+      
       const [content] = await db.insert(contents).values(preparedContent).returning();
       return content;
     } catch (error) {

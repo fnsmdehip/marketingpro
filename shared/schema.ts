@@ -21,13 +21,14 @@ export const contents = pgTable("contents", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   title: text("title").notNull(),
-  content: text("content"),
-  contentType: text("content_type").notNull(), // blog, social, email, etc.
-  status: text("status").notNull(), // draft, scheduled, published
+  body: text("body"),              // Main content text
+  contentType: text("content_type").default('social'), // blog, social, email, etc.
+  status: text("status").notNull().default('draft'), // draft, scheduled, published, ready
   scheduledDate: timestamp("scheduled_date"),
   publishedDate: timestamp("published_date"),
-  platformId: integer("platform_id"),
-  metadata: json("metadata"),
+  platforms: json("platforms").$type<string[]>().default([]), // Array of platform IDs or identifiers
+  mediaUrls: json("media_urls").$type<string[]>().default([]), // Array of media URLs
+  metadata: json("metadata").default({}),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -84,11 +85,12 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export const insertContentSchema = createInsertSchema(contents).pick({
   userId: true,
   title: true,
-  content: true,
+  body: true,
   contentType: true,
   status: true,
   scheduledDate: true,
-  platformId: true,
+  platforms: true,
+  mediaUrls: true,
   metadata: true,
 });
 

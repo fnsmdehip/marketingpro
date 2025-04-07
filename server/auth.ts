@@ -132,10 +132,7 @@ export function setupAuth(app: Express) {
             demoUser = await storage.createUser({
               username: demoUsername,
               email: "demo@example.com",
-              password: await hashPassword(demoPassword),
-              name: "Demo User",
-              role: "user",
-              preferences: {}
+              password: await hashPassword(demoPassword)
             });
             console.log("Created demo user:", demoUser.id);
           }
@@ -155,7 +152,7 @@ export function setupAuth(app: Express) {
       })();
     } else {
       // Normal login flow using passport
-      passport.authenticate("local", (err, user, info) => {
+      passport.authenticate("local", (err: any, user: any, info: any) => {
         if (err) return next(err);
         if (!user) return res.status(401).json({ message: "Invalid credentials" });
         

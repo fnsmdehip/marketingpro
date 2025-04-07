@@ -179,6 +179,12 @@ export class MemStorage implements IStorage {
     const content: Content = {
       ...insertContent,
       id,
+      body: insertContent.body || '',
+      contentType: insertContent.contentType || 'social',
+      status: insertContent.status || 'draft',
+      platforms: Array.isArray(insertContent.platforms) ? insertContent.platforms : [],
+      mediaUrls: Array.isArray(insertContent.mediaUrls) ? insertContent.mediaUrls : [],
+      metadata: insertContent.metadata || {},
       publishedDate: null,
       createdAt: now,
       updatedAt: now

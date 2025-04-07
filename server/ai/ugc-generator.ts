@@ -1,310 +1,218 @@
-import { Request, Response, Router } from 'express';
-import { z } from 'zod';
-import { aiManager } from './index';
-import { storage } from '../storage';
+import { Router } from 'express';
+import { AIManager, aiManager } from './index';
 
 const router = Router();
 
-// Validation schemas for UGC generation
-const ugcImageRequestSchema = z.object({
-  prompt: z.string().min(5, "Prompt must be at least 5 characters"),
-  model: z.string().optional(),
-  size: z.string().optional(),
-  style: z.string().optional(),
-  userId: z.number().int().positive().optional()
-});
-
-const ugcVideoRequestSchema = z.object({
-  prompt: z.string().min(5, "Prompt must be at least 5 characters"),
-  model: z.string().optional(),
-  duration: z.string().optional(),
-  style: z.string().optional(),
-  userId: z.number().int().positive().optional()
-});
-
-const ugcSpeechRequestSchema = z.object({
-  text: z.string().min(5, "Text must be at least 5 characters"),
-  model: z.string().optional(),
-  voice: z.string().optional(),
-  userId: z.number().int().positive().optional()
-});
-
-// Middleware to check authentication
-const checkAuth = (req: Request, res: Response, next: Function) => {
-  // Allow skipAuth for testing
-  if (req.body.skipAuth === true) {
-    return next();
-  }
-  
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ success: false, error: { message: "Unauthorized" } });
-  }
-  
-  next();
-};
-
-// Circuit breaker pattern implementation
-class CircuitBreaker {
-  private failureCount: number = 0;
-  private lastFailureTime: number = 0;
-  private circuitOpen: boolean = false;
-  private readonly failureThreshold: number = 3;
-  private readonly resetTimeout: number = 5 * 60 * 1000; // 5 minutes
-  
-  isOpen(): boolean {
-    if (this.circuitOpen) {
-      const now = Date.now();
-      if (now - this.lastFailureTime > this.resetTimeout) {
-        this.reset();
-        return false;
-      }
-      return true;
-    }
-    return false;
-  }
-  
-  recordFailure(): void {
-    this.failureCount++;
-    this.lastFailureTime = Date.now();
-    
-    if (this.failureCount >= this.failureThreshold) {
-      this.circuitOpen = true;
-      console.warn(`Circuit breaker opened after ${this.failureCount} consecutive failures`);
-    }
-  }
-  
-  recordSuccess(): void {
-    if (this.failureCount > 0) {
-      this.reset();
-    }
-  }
-  
-  reset(): void {
-    this.failureCount = 0;
-    this.circuitOpen = false;
-  }
-  
-  getTimeUntilReset(): number {
-    if (!this.circuitOpen) return 0;
-    
-    const now = Date.now();
-    const timeElapsed = now - this.lastFailureTime;
-    const timeRemaining = Math.max(0, this.resetTimeout - timeElapsed);
-    
-    return Math.ceil(timeRemaining / 1000); // Return seconds
-  }
-}
-
-// Create circuit breakers for each generation type
-const imageCircuitBreaker = new CircuitBreaker();
-const videoCircuitBreaker = new CircuitBreaker();
-const speechCircuitBreaker = new CircuitBreaker();
-
-// Image generation endpoint
-router.post('/generate/image', checkAuth, async (req: Request, res: Response) => {
+// UGC Text Generation endpoint
+router.post('/ugc/text', async (req, res) => {
   try {
-    // Check circuit breaker
-    if (imageCircuitBreaker.isOpen()) {
-      const retryAfter = imageCircuitBreaker.getTimeUntilReset();
-      return res.status(503).json({
+    const { prompt, platform, style, userId } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({
         success: false,
-        error: { 
-          message: "Service temporarily unavailable. Too many failed requests.", 
-          retryAfter 
-        }
+        error: { message: "Prompt is required" }
       });
     }
     
-    // Validate request
-    const { prompt, model, size, style } = ugcImageRequestSchema.parse(req.body);
+    // Create a platform-specific enhanced prompt
+    let enhancedPrompt = prompt;
     
-    // Parse size to width and height if provided
-    let width = 1024, height = 1024;
-    if (size) {
-      const dimensions = size.split('x');
-      if (dimensions.length === 2) {
-        width = parseInt(dimensions[0]);
-        height = parseInt(dimensions[1]);
+    if (platform) {
+      // Add platform-specific context to the prompt
+      const platformContexts: {[key: string]: string} = {
+        twitter: "Create content optimized for Twitter (X): concise, under 280 characters, engaging, with appropriate hashtags. Content should be shareable and conversation-starting.",
+        facebook: "Create content optimized for Facebook: 1-2 paragraphs, conversational tone, designed to encourage comments and shares. Can include questions to engage audience.",
+        instagram: "Create content optimized for Instagram: visual-focused description, emoji-friendly, with appropriate hashtags (5-15 tags). Content should be aspirational and lifestyle-oriented.",
+        linkedin: "Create content optimized for LinkedIn: professional tone, industry-focused, 2-3 paragraphs with business insights. Content should demonstrate expertise and encourage professional engagement.",
+        pinterest: "Create content optimized for Pinterest: visual-focused, inspirational, with a clear call-to-action. Content should be aspirational and discoverable.",
+        tiktok: "Create content optimized for TikTok: extremely concise (15-30 seconds when spoken), trend-aware, with viral potential. Content should be entertaining and authentic."
+      };
+      
+      const platformContext = platformContexts[platform.toLowerCase()] || 
+        "Create engaging social media content that encourages audience interaction.";
+      
+      enhancedPrompt = `${platformContext}\n\nPrompt: ${prompt}`;
+    }
+    
+    if (style) {
+      // Add style guidance to the prompt
+      const styleContexts: {[key: string]: string} = {
+        professional: "Use a professional, authoritative tone with industry-specific terminology where appropriate. The content should establish expertise and credibility.",
+        casual: "Use a casual, conversational tone as if talking to a friend. Include some personality and humor where appropriate.",
+        motivational: "Use an inspiring, uplifting tone with powerful language that encourages action and positive emotion.",
+        educational: "Use a clear, instructional tone focused on teaching concepts with examples. Break down complex ideas into simple explanations.",
+        humorous: "Use a funny, light-hearted tone with appropriate humor, wordplay, or wit. The content should entertain while delivering the message.",
+        storytelling: "Frame the content as a narrative with a beginning, middle and end. Use descriptive language and create emotional engagement."
+      };
+      
+      const styleContext = styleContexts[style.toLowerCase()] || 
+        "Write in a balanced, accessible tone appropriate for general audiences.";
+      
+      enhancedPrompt = `${enhancedPrompt}\n\nStyle guidance: ${styleContext}`;
+    }
+    
+    // Add quality guidance at the end
+    enhancedPrompt = `${enhancedPrompt}\n\nEnsure the content is original, engaging, and directly addresses the target audience. Focus on providing value and encouraging audience interaction.`;
+    
+    console.log("[UGC Generator] Enhanced prompt:", enhancedPrompt);
+    
+    // Send to AI manager
+    const result = await aiManager.generateText({
+      prompt: enhancedPrompt,
+      temperature: 0.7,
+      userId: req.user?.id || userId
+    });
+    
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error in UGC text generation:", error);
+    return res.status(500).json({
+      success: false,
+      error: { message: error.message || "Internal server error" }
+    });
+  }
+});
+
+// UGC Image Generation endpoint
+router.post('/ugc/image', async (req, res) => {
+  try {
+    const { prompt, style, size, userId } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({
+        success: false,
+        error: { message: "Prompt is required" }
+      });
+    }
+    
+    // Create an enhanced image prompt
+    let enhancedPrompt = prompt;
+    
+    if (style) {
+      // Add style guidance to the prompt
+      const styleContexts: {[key: string]: string} = {
+        photorealistic: "ultra-realistic, photographic quality, detailed lighting and textures",
+        cartoon: "cartoon style, vibrant colors, simplified forms, cute aesthetic",
+        minimalist: "minimalist design, clean lines, lots of negative space, simple color palette",
+        "3d": "3D rendered, volumetric lighting, detailed textures, depth of field",
+        painting: "digital painting, artistic brushstrokes, rich colors, fine details",
+        sketch: "hand-drawn sketch, pencil lines, artistic shading, minimal color"
+      };
+      
+      const styleContext = styleContexts[style.toLowerCase()] || "";
+      
+      if (styleContext) {
+        enhancedPrompt = `${enhancedPrompt}, ${styleContext}`;
       }
     }
     
-    // Call AI manager
+    // Add quality guidance
+    enhancedPrompt = `${enhancedPrompt}, high quality, professional, marketing material`;
+    
+    console.log("[UGC Generator] Enhanced image prompt:", enhancedPrompt);
+    
+    // Forward to AI manager
     const result = await aiManager.generateImage({
-      prompt,
-      model,
-      width,
-      height,
+      prompt: enhancedPrompt,
+      size: size || "1024x1024",
       style,
-      userId: req.user?.id
+      userId: req.user?.id || userId
     });
-    
-    // Record usage
-    if (result.success && req.user?.id) {
-      await storage.createAiUsage({
-        userId: req.user.id,
-        provider: result.provider,
-        requestType: 'image_generation',
-        status: 'completed'
-      });
-    }
-    
-    // Handle circuit breaker logic
-    if (result.success) {
-      imageCircuitBreaker.recordSuccess();
-    } else {
-      // Only record failures for certain errors
-      if (result.error?.code && ['internal_error', 'provider_error'].includes(result.error.code)) {
-        imageCircuitBreaker.recordFailure();
-      }
-    }
     
     return res.json(result);
   } catch (error: any) {
-    console.error('Error in UGC image generation:', error);
-    
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        error: { message: "Invalid request data", details: error.errors }
-      });
-    }
-    
-    // General error
-    res.status(500).json({
+    console.error("Error in UGC image generation:", error);
+    return res.status(500).json({
       success: false,
-      error: { message: "Failed to generate image" }
+      error: { message: error.message || "Internal server error" }
     });
   }
 });
 
-// Video generation endpoint
-router.post('/generate/video', checkAuth, async (req: Request, res: Response) => {
+// UGC Text-to-Speech endpoint
+router.post('/ugc/speech', async (req, res) => {
   try {
-    // Check circuit breaker
-    if (videoCircuitBreaker.isOpen()) {
-      const retryAfter = videoCircuitBreaker.getTimeUntilReset();
-      return res.status(503).json({
-        success: false,
-        error: { 
-          message: "Service temporarily unavailable. Too many failed requests.", 
-          retryAfter 
-        }
-      });
-    }
+    const { text, voice, speed, userId } = req.body;
     
-    // Validate request
-    const { prompt, model, duration, style } = ugcVideoRequestSchema.parse(req.body);
-    
-    // Call AI manager
-    const result = await aiManager.generateVideo({
-      prompt,
-      model,
-      duration: duration ? parseInt(duration) : undefined,
-      style,
-      userId: req.user?.id
-    });
-    
-    // Record usage
-    if (result.success && req.user?.id) {
-      await storage.createAiUsage({
-        userId: req.user.id,
-        provider: result.provider,
-        requestType: 'video_generation',
-        status: 'completed'
-      });
-    }
-    
-    // Handle circuit breaker logic
-    if (result.success) {
-      videoCircuitBreaker.recordSuccess();
-    } else {
-      if (result.error?.code && ['internal_error', 'provider_error'].includes(result.error.code)) {
-        videoCircuitBreaker.recordFailure();
-      }
-    }
-    
-    return res.json(result);
-  } catch (error: any) {
-    console.error('Error in UGC video generation:', error);
-    
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
+    if (!text) {
       return res.status(400).json({
         success: false,
-        error: { message: "Invalid request data", details: error.errors }
+        error: { message: "Text is required" }
       });
     }
     
-    // General error
-    res.status(500).json({
-      success: false,
-      error: { message: "Failed to generate video" }
-    });
-  }
-});
-
-// Speech generation endpoint
-router.post('/generate/speech', checkAuth, async (req: Request, res: Response) => {
-  try {
-    // Check circuit breaker
-    if (speechCircuitBreaker.isOpen()) {
-      const retryAfter = speechCircuitBreaker.getTimeUntilReset();
-      return res.status(503).json({
-        success: false,
-        error: { 
-          message: "Service temporarily unavailable. Too many failed requests.", 
-          retryAfter 
-        }
-      });
-    }
+    console.log("[UGC Generator] TTS request:", { textLength: text.length, voice });
     
-    // Validate request
-    const { text, model, voice } = ugcSpeechRequestSchema.parse(req.body);
-    
-    // Call AI manager
-    const result = await aiManager.generateSpeech({
+    // Forward to AI manager
+    const result = await aiManager.textToSpeech({
       text,
-      model,
-      voice,
-      userId: req.user?.id
+      voice: voice || "neutral",
+      speed: speed || 1.0,
+      userId: req.user?.id || userId
     });
-    
-    // Record usage
-    if (result.success && req.user?.id) {
-      await storage.createAiUsage({
-        userId: req.user.id,
-        provider: result.provider,
-        requestType: 'speech_generation',
-        status: 'completed'
-      });
-    }
-    
-    // Handle circuit breaker logic
-    if (result.success) {
-      speechCircuitBreaker.recordSuccess();
-    } else {
-      if (result.error?.code && ['internal_error', 'provider_error'].includes(result.error.code)) {
-        speechCircuitBreaker.recordFailure();
-      }
-    }
     
     return res.json(result);
   } catch (error: any) {
-    console.error('Error in UGC speech generation:', error);
+    console.error("Error in UGC text-to-speech generation:", error);
+    return res.status(500).json({
+      success: false,
+      error: { message: error.message || "Internal server error" }
+    });
+  }
+});
+
+// UGC Video Generation endpoint
+router.post('/ugc/video', async (req, res) => {
+  try {
+    const { prompt, duration, style, userId } = req.body;
     
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
+    if (!prompt) {
       return res.status(400).json({
         success: false,
-        error: { message: "Invalid request data", details: error.errors }
+        error: { message: "Prompt is required" }
       });
     }
     
-    // General error
-    res.status(500).json({
+    // Create an enhanced video prompt
+    let enhancedPrompt = prompt;
+    
+    if (style) {
+      // Add style guidance to the prompt
+      const styleContexts: {[key: string]: string} = {
+        cinematic: "cinematic quality, professional camera work, film-like lighting and composition",
+        animated: "animated style, smooth motion, vibrant colors, expressive characters",
+        documentary: "documentary style, realistic, observational camera work, natural lighting",
+        commercial: "professional commercial quality, polished visuals, product-focused, high production value",
+        social: "optimized for social media, short attention-grabbing visuals, dynamic pacing"
+      };
+      
+      const styleContext = styleContexts[style.toLowerCase()] || "";
+      
+      if (styleContext) {
+        enhancedPrompt = `${enhancedPrompt}, ${styleContext}`;
+      }
+    }
+    
+    // Add quality guidance
+    enhancedPrompt = `${enhancedPrompt}, high quality, professional, marketing material`;
+    
+    console.log("[UGC Generator] Enhanced video prompt:", enhancedPrompt);
+    
+    // Forward to AI manager
+    const result = await aiManager.generateVideo({
+      prompt: enhancedPrompt,
+      duration: duration || 15,
+      style,
+      userId: req.user?.id || userId
+    });
+    
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error in UGC video generation:", error);
+    return res.status(500).json({
       success: false,
-      error: { message: "Failed to generate speech" }
+      error: { message: error.message || "Internal server error" }
     });
   }
 });

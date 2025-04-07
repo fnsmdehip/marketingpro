@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupPaymentRoutes } from "./payment";
 import ugcGeneratorRoutes from "./ai/ugc-generator";
+import contentRoutes from "./contentRoutes";
 import { AIManager, aiManager } from "./ai/index";
 import { Request, Response } from "express";
 import { setupAuth } from "./auth";
@@ -21,6 +22,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount UGC generator routes
   app.use("/api/ai", ugcGeneratorRoutes);
+  
+  // Mount content management routes
+  app.use(contentRoutes);
 
   // Add direct text generation endpoint
   app.post("/api/ai/generate/text", async (req: Request, res: Response) => {
