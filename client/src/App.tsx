@@ -18,6 +18,7 @@ import AutomationPage from "@/pages/marketing-tools/automation";
 import ConversionTacticsPage from "@/pages/marketing-tools/conversion-tactics";
 import GrowthEnginesPage from "@/pages/marketing-tools/growth-engines";
 import PromptArsenalPage from "@/pages/marketing-tools/prompt-arsenal";
+import WebScraperPage from "@/pages/marketing-tools/web-scraper-page";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/marketing/conversion-tactics" component={ConversionTacticsPage} />
       <Route path="/marketing/growth-engines" component={GrowthEnginesPage} />
       <Route path="/marketing/prompt-arsenal" component={PromptArsenalPage} />
+      <Route path="/marketing/web-scraper" component={WebScraperPage} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />

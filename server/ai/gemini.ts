@@ -21,7 +21,8 @@ export class GeminiProvider extends AIProvider {
     "gemini-flash", // Basic fast model
     "gemini-1.0-pro-vision", // Original vision model
     "gemini-1.0-pro", // Original pro model
-    // Higher quality Gemini 1.5 models would be enabled based on project requirements
+    "gemini-1.5-pro", // Gemini 1.5 Pro model
+    "gemini-2.5-pro", // Latest Gemini 2.5 Pro model
   ];
 
   constructor(provider: { apiKey: string }) {

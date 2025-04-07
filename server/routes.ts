@@ -108,6 +108,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching AI providers" });
     }
   });
+  
+  // Web Scraper API endpoint
+  app.post("/api/web-scraper", async (req: Request, res: Response) => {
+    try {
+      const { url } = req.body;
+      
+      if (!url) {
+        return res.status(400).json({
+          success: false,
+          error: { message: "URL is required" }
+        });
+      }
+      
+      // Execute Python script to scrape the website
+      const { spawnSync } = require('child_process');
+      const result = spawnSync('python', ['-c', `
+import sys
+import trafilatura
+
+try:
+    # Send a request to the website
+    downloaded = trafilatura.fetch_url("${url}")
+    text = trafilatura.extract(downloaded)
+    if text:
+        print(text)
+    else:
+        print("No content extracted from the URL")
+except Exception as e:
+    print(f"Error: {str(e)}", file=sys.stderr)
+    sys.exit(1)
+      `]);
+      
+      if (result.status !== 0) {
+        console.error(`Web scraper error: ${result.stderr.toString()}`);
+        return res.status(500).json({
+          success: false,
+          error: { message: `Error scraping website: ${result.stderr.toString()}` }
+        });
+      }
+      
+      const data = result.stdout.toString();
+      
+      // Return the scraped content
+      return res.json({
+        success: true,
+        data: data
+      });
+    } catch (error: any) {
+      console.error("Error in web scraper endpoint:", error);
+      return res.status(500).json({
+        success: false,
+        error: { message: error.message || "Internal server error" }
+      });
+    }
+  });
 
   // Create HTTP server
   const httpServer = createServer(app);

@@ -102,6 +102,11 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
           href: "/marketing/prompt-arsenal",
           active: location === "/marketing/prompt-arsenal",
         },
+        {
+          name: "Web Scraper",
+          href: "/marketing/web-scraper",
+          active: location === "/marketing/web-scraper",
+        },
       ],
     },
   ];
