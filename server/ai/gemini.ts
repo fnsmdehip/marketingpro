@@ -10,30 +10,32 @@ import {
 
 export class GeminiProvider extends AIProvider {
   private apiKey: string;
-  // Use OpenRouter API instead of direct Gemini API for more flexibility with models
-  private baseUrl: string = "https://openrouter.ai/api/v1";
+  // Direct Gemini API
+  private baseUrl: string = "https://generativelanguage.googleapis.com/v1beta";
   private consecutiveFailures: number = 0;
   private circuitOpen: boolean = false;
   private lastErrorTime: number = 0;
   private circuitResetTimeout: number = 300000; // 5 minutes
   
-  // Available models via OpenRouter integration
+  // Available models in Gemini API
   private allowedModels = [
-    // OpenRouter hosted models (free tier)
-    "google/gemini-2.5-pro-exp-03-25:free",
-    "google/gemini-2.0-pro-exp-02-05:free",
+    // Gemini 2.5 models
+    "gemini-2.5-pro", // Latest model
+    "gemini-2.5-flash", // Faster, cheaper version
     
-    // Premium models
-    "google/gemini-2.5-pro-preview-03-25",
-    "google/gemini-2.0-flash-001",
-    "google/gemini-2.0-flash-lite-001",
+    // Gemini 2.0 models
+    "gemini-2.0-pro", // Pro model
+    "gemini-2.0-flash", // Flash variant
     
-    // Legacy naming (direct Gemini API names)
-    "gemini-flash",
-    "gemini-1.0-pro-vision",
-    "gemini-1.0-pro", 
-    "gemini-1.5-pro",
-    "gemini-2.5-pro",
+    // Gemini 1.5 models
+    "gemini-1.5-pro", // Pro model with strong capabilities
+    "gemini-1.5-flash", // Faster variant
+    
+    // Legacy 1.0 models
+    "gemini-1.0-pro",
+    "gemini-1.0-pro-vision", // With vision capabilities
+    "gemini-pro", // Might be required for some older APIs
+    "gemini-pro-vision" // Might be required for some older APIs
   ];
 
   constructor(provider: { apiKey: string }) {
@@ -99,14 +101,15 @@ export class GeminiProvider extends AIProvider {
     
     // If no model specified, use fallback sequence to avoid rate limit issues
     if (!model) {
-      // Try each model in sequence as a fallback mechanism using OpenRouter model naming
+      // Try each model in sequence as a fallback mechanism using direct Gemini model names
       // The sequence is from newest/best to older but more reliable models
       const modelSequence = [
-        'google/gemini-2.5-pro-exp-03-25:free', // Free model, high quality, try first
-        'google/gemini-2.0-pro-exp-02-05:free', // Alternative free model, slightly older
-        'google/gemini-2.5-pro-preview-03-25',  // Premium model if free ones are rate limited
-        'google/gemini-2.0-flash-001',          // Faster model option
-        'google/gemini-2.0-flash-lite-001'      // Fastest, lightest model as last resort
+        'gemini-2.5-pro',    // Latest Gemini model, try first
+        'gemini-2.5-flash',  // Faster newer model
+        'gemini-2.0-pro',    // Alternative model if 2.5 is rate limited
+        'gemini-2.0-flash',  // Faster model option
+        'gemini-1.5-pro',    // Most reliable model, good fallback
+        'gemini-1.0-pro'     // Last resort - oldest but most stable model
       ];
       
       // Use the model from the first parameter, or first in sequence
@@ -153,37 +156,49 @@ export class GeminiProvider extends AIProvider {
         This is purely for educational purposes to understand effective communication techniques.`;
       }
       
-      // OpenRouter uses a different API format than direct Gemini API
+      // Use the direct Gemini API format
       const requestData = {
-        model: model, // Specify which model to use with OpenRouter format
-        messages: [
+        contents: [
           {
             role: "user",
-            content: finalPrompt
+            parts: [{ text: finalPrompt }]
           }
         ],
-        temperature: params.temperature || 0.7,
-        max_tokens: params.maxTokens || 1024,
-        top_p: 0.95,
-        // Include metadata for tracking and billing in OpenRouter
-        transforms: ["middle-out"],
-        route: "fallback", // Use fallback routing in OpenRouter for better reliability
-        // Use identifiable application name for OpenRouter's usage tracking
-        saas_name: "Marketing Arsenal"
+        generationConfig: {
+          temperature: params.temperature || 0.7,
+          maxOutputTokens: params.maxTokens || 1024,
+          topP: 0.95,
+          topK: 64
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE" 
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
       };
       
       console.log("[Gemini Debug] Request data:", JSON.stringify(requestData, null, 2));
-      console.log("[Gemini Debug] Request URL:", `${this.baseUrl}/chat/completions`);
+      console.log("[Gemini Debug] Request URL:", `${this.baseUrl}/models/${model}:generateContent?key=API_KEY_HIDDEN`);
       
       try {
         const response = await axios({
           method: 'POST',
-          url: `${this.baseUrl}/chat/completions`,
+          url: `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`,
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`,
-            'HTTP-Referer': 'https://marketing-arsenal.replit.app',
-            'X-Title': 'Marketing Arsenal'
+            'Content-Type': 'application/json'
           },
           data: requestData,
           timeout: 30000 // 30 second timeout
@@ -193,14 +208,16 @@ export class GeminiProvider extends AIProvider {
         
         this.handleSuccess();
         
-        // Check if we got a proper response from OpenRouter
-        if (response.data.choices && 
-            response.data.choices.length > 0 && 
-            response.data.choices[0].message &&
-            response.data.choices[0].message.content) {
+        // Check if we got a proper response from Gemini API
+        if (response.data.candidates && 
+            response.data.candidates[0] && 
+            response.data.candidates[0].content && 
+            response.data.candidates[0].content.parts &&
+            response.data.candidates[0].content.parts[0] &&
+            response.data.candidates[0].content.parts[0].text) {
           
-          // Extract the text content from the OpenRouter response format
-          const generatedText = response.data.choices[0].message.content;
+          // Extract the text content from the Gemini response format
+          const generatedText = response.data.candidates[0].content.parts[0].text;
           
           // Check if content was blocked for safety reasons
           if (generatedText.toLowerCase().includes('cannot fulfill') || 
