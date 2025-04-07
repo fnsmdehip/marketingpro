@@ -53,8 +53,8 @@ function createProvider(providerData: AiProvider): AIProvider | null {
       }
     }
     else if (providerNameLower.includes('deepseek')) {
-      // Always use the hardcoded OpenRouter API key for DeepSeek
-      apiKey = "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";
+      // Use the environment variable OpenRouter API key for DeepSeek
+      apiKey = process.env.OPENROUTER_API_KEY;
       if (apiKey) {
         return new DeepSeekProvider({ apiKey });
       }
@@ -108,33 +108,26 @@ export class AIManager {
       // Register hardcoded providers first to ensure they're available
       // These are the free models we prioritize
       
-      // Load OpenRouter API key from .env.openrouter file as a fallback
-      let openRouterApiKey = process.env.OPENROUTER_API_KEY;
-      try {
-        if (!openRouterApiKey) {
-          const fs = require('fs');
-          const envFile = fs.readFileSync('.env.openrouter', 'utf8');
-          
-          // Extract the API key from the .env.openrouter file - this handles the new format
-          const key = "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";
-          openRouterApiKey = key;
-          console.log("Using hardcoded OpenRouter API key:", openRouterApiKey.substring(0, 12) + "...");
-          
-          // Set it in process.env for future use
-          if (openRouterApiKey) {
-            process.env.OPENROUTER_API_KEY = openRouterApiKey;
-          }
-        }
-      } catch (err: any) {
-        console.warn("Failed to read .env.openrouter file:", err.message);
+      // Use OpenRouter API key from Replit environment secrets
+      const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+      if (openRouterApiKey) {
+        console.log("Found OpenRouter API key in environment:", openRouterApiKey.substring(0, 10) + "...");
+      } else {
+        console.warn("OPENROUTER_API_KEY not found in environment. AI text generation will not work.");
       }
       
-      // Always use the hardcoded OpenRouter API key for DeepSeek
-      const hardcodedOpenRouterKey = "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";
+      // Use the environment variable OpenRouter API key for DeepSeek
       try {
-        const deepseekProvider = new DeepSeekProvider({ apiKey: hardcodedOpenRouterKey });
-        this.providers.set('deepseek', deepseekProvider);
-        console.log("DeepSeek provider initialized successfully with hardcoded OpenRouter API key:", hardcodedOpenRouterKey?.substring(0, 10) + "...");
+        // Use process.env.OPENROUTER_API_KEY which should be set by Replit Secrets
+        const openRouterKey = process.env.OPENROUTER_API_KEY;
+        
+        if (openRouterKey) {
+          const deepseekProvider = new DeepSeekProvider({ apiKey: openRouterKey });
+          this.providers.set('deepseek', deepseekProvider);
+          console.log("DeepSeek provider initialized successfully with OpenRouter API key:", openRouterKey?.substring(0, 10) + "...");
+        } else {
+          console.warn("OPENROUTER_API_KEY not found in environment, DeepSeek provider not available");
+        }
       } catch (error) {
         console.error("Failed to initialize DeepSeek provider:", error);
       }

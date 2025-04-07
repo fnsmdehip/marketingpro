@@ -134,7 +134,7 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
           <div className="mt-5 flex-grow flex flex-col">
             <nav className="flex-1 px-2 pb-4 space-y-1">
               {navItems.map((item, i) => (
-                <React.Fragment key={i}>
+                <div key={i}>
                   {item.hasSubmenu ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -155,7 +155,7 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
                         {item.submenu?.map((subItem, j) => (
                           <DropdownMenuItem key={j} asChild>
                             <Link
-                              href={subItem.href}
+                              href={subItem.href || "/"}
                               className={cn(
                                 "w-full cursor-pointer",
                                 subItem.active && "bg-primary/10 text-primary"
@@ -169,7 +169,7 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
                     </DropdownMenu>
                   ) : (
                     <Link
-                      href={item.href}
+                      href={item.href || "/"}
                       className={cn(
                         "flex items-center px-2 py-2 text-sm font-medium rounded-md group hover:bg-muted",
                         item.active
@@ -181,7 +181,7 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
                       <span className="ml-3">{item.name}</span>
                     </Link>
                   )}
-                </React.Fragment>
+                </div>
               ))}
             </nav>
             <div className="border-t pt-4 pb-4 px-2">
@@ -245,7 +245,7 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
             </SheetHeader>
             <nav className="flex flex-col space-y-1">
               {navItems.map((item, i) => (
-                <React.Fragment key={i}>
+                <div key={i}>
                   {item.hasSubmenu ? (
                     <div className="space-y-1">
                       <div className="py-2">
@@ -257,7 +257,7 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
                           {item.submenu?.map((subItem, j) => (
                             <Link
                               key={j}
-                              href={subItem.href}
+                              href={subItem.href || "/"}
                               onClick={closeMobileNav}
                               className={cn(
                                 "flex items-center px-2 py-2 text-sm font-medium rounded-md group hover:bg-muted",
@@ -274,7 +274,7 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
                     </div>
                   ) : (
                     <Link
-                      href={item.href}
+                      href={item.href || "/"}
                       onClick={closeMobileNav}
                       className={cn(
                         "flex items-center px-2 py-2 text-sm font-medium rounded-md group hover:bg-muted",
@@ -287,7 +287,7 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
                       <span className="ml-3">{item.name}</span>
                     </Link>
                   )}
-                </React.Fragment>
+                </div>
               ))}
               <div className="border-t my-4"></div>
               {secondaryNavItems.map((item, i) => (

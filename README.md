@@ -37,8 +37,30 @@ For complete specifications and implementation details, please refer to the foll
 
 1. Clone the repository
 2. Use the packager tool to install dependencies
-3. Start the development server with the workflow "Start application"
-4. Access the application at the provided URL
+3. Set up environment variables for API keys (see below)
+4. Start the development server with the workflow "Start application"
+5. Access the application at the provided URL
+
+### Environment Variables & API Keys
+
+This project uses environment variables to store API keys securely. To set up:
+
+1. Copy `.env.example` to a new file named `.env`
+2. Fill in the required API keys (see below)
+3. Never commit your `.env` file to version control (it's in `.gitignore`)
+
+**Required API Keys:**
+
+- **OpenRouter API Key** - Required for AI text generation
+  - Sign up at [OpenRouter.ai](https://openrouter.ai/)
+  - Set as `OPENROUTER_API_KEY` in your `.env` file
+
+**Optional API Keys (for additional features):**
+
+- **Stripe** - Required for payment processing 
+  - Sign up at [Stripe.com](https://stripe.com)
+- **OpenAI, Anthropic, etc.** - For additional AI providers
+  - See `.env.example` for the full list
 
 ## Development Guidelines
 
@@ -49,3 +71,19 @@ For complete specifications and implementation details, please refer to the foll
 5. Only consider a feature complete when it meets ALL requirements and passes ALL quality gates
 
 Remember: No feature can be simplified or eliminated during implementation. The complete marketing SaaS suite must be built exactly as specified in the documentation.
+
+## API Keys and Environment Variables
+
+To properly use this application, you need to set up environment variables for API keys:
+
+1. For development in Replit, use the "Secrets" feature to securely store API keys
+2. For local development or other environments, run the included setup script:
+   ```bash
+   # Run the setup script to create your .env file
+   ./setup-env.sh
+   ```
+3. Alternatively, copy `.env.example` to `.env` and fill in the values manually
+
+See [API Keys Setup Guide](./docs/api_keys_setup.md) for detailed instructions.
+
+⚠️ **IMPORTANT**: Never hardcode API keys directly in your code files. Always use environment variables.

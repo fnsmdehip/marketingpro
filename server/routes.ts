@@ -105,16 +105,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Execute Python script to scrape the website
-      // Using import.meta.require for ESM compatibility
-      const { spawnSync } = await import('child_process');
-      const result = spawnSync('python', ['-c', `
+      // Set a timeout for the scraping operation - 15 seconds max
+      const timeoutMs = 15000; 
+      
+      // Check if the URL is from a site that likely blocks scraping
+      const blockedDomains = ['amazon.com', 'amazon.', 'linkedin.com', 'facebook.com', 'instagram.com'];
+      const isBlockedDomain = blockedDomains.some(domain => url.includes(domain));
+      
+      if (isBlockedDomain) {
+        return res.status(400).json({
+          success: false,
+          error: { 
+            message: "This website likely blocks scraping attempts. Try a different URL that allows content extraction." 
+          }
+        });
+      }
+      
+      // Execute Python script to scrape the website with timeout
+      const { spawn } = await import('child_process');
+      
+      // Create a promise that will be rejected after timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Scraping timed out')), timeoutMs);
+      });
+      
+      // Create a promise for the scraping process
+      const scrapingPromise = new Promise((resolve, reject) => {
+        const pythonProcess = spawn('python', ['-c', `
 import sys
 import trafilatura
 
 try:
-    # Send a request to the website
-    downloaded = trafilatura.fetch_url("${url}")
+    # Send a request to the website with a custom user agent
+    downloaded = trafilatura.fetch_url(
+        "${url}",
+        custom_user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    )
     text = trafilatura.extract(downloaded)
     if text:
         print(text)
@@ -123,23 +149,61 @@ try:
 except Exception as e:
     print(f"Error: {str(e)}", file=sys.stderr)
     sys.exit(1)
-      `]);
+        `]);
+        
+        let stdout = '';
+        let stderr = '';
+        
+        pythonProcess.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        pythonProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        pythonProcess.on('close', (code) => {
+          if (code !== 0) {
+            reject(new Error(stderr || 'Unknown error occurred'));
+          } else {
+            resolve(stdout);
+          }
+        });
+        
+        pythonProcess.on('error', (err) => {
+          reject(err);
+        });
+      });
       
-      if (result.status !== 0) {
-        console.error(`Web scraper error: ${result.stderr.toString()}`);
+      // Race between the scraping process and the timeout
+      try {
+        const data = await Promise.race([scrapingPromise, timeoutPromise]) as string;
+        
+        if (data.includes("No content extracted from the URL")) {
+          return res.status(200).json({
+            success: true,
+            data: "No content could be extracted. The website may be blocking scraping or has no main content."
+          });
+        }
+        
+        return res.json({
+          success: true,
+          data: data
+        });
+      } catch (error: any) {
+        console.error('Scraping error:', error.message);
+        if (error.message === 'Scraping timed out') {
+          return res.status(408).json({
+            success: false,
+            error: { message: "Scraping operation timed out. The website may be too large or blocking our request." }
+          });
+        }
+        
         return res.status(500).json({
           success: false,
-          error: { message: `Error scraping website: ${result.stderr.toString()}` }
+          error: { message: `Error scraping website: ${error.message}` }
         });
       }
-      
-      const data = result.stdout.toString();
-      
-      // Return the scraped content
-      return res.json({
-        success: true,
-        data: data
-      });
     } catch (error: any) {
       console.error("Error in web scraper endpoint:", error);
       return res.status(500).json({
