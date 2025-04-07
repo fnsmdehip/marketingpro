@@ -63,8 +63,14 @@ export default function AIGeneratorPage() {
   // Text generation mutation
   const generateTextMutation = useMutation({
     mutationFn: async (params: { prompt: string, model: string, temperature: number }) => {
-      const res = await apiRequest("POST", "/api/ai/generate/text", params);
-      return await res.json();
+      try {
+        const res = await apiRequest("POST", "/api/ai/generate/text", params);
+        const data = await res.json();
+        return data;
+      } catch (error) {
+        console.error("Error parsing response:", error);
+        throw new Error("Failed to parse API response");
+      }
     },
     onSuccess: (data) => {
       if (data.success) {
@@ -87,6 +93,7 @@ export default function AIGeneratorPage() {
         description: error.message,
         variant: "destructive",
       });
+      console.error("Text generation error:", error);
     },
   });
   

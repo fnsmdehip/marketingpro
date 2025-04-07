@@ -110,6 +110,7 @@ export const insertAiUsageSchema = createInsertSchema(aiUsages).pick({
   completionTokens: true,
   totalTokens: true,
   cost: true,
+  timestamp: true,
 });
 
 export const insertAiProviderSchema = createInsertSchema(aiProviders).pick({

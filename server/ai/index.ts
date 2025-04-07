@@ -87,6 +87,16 @@ export class AIManager {
   constructor() {
     this.providers = new Map<string, AIProvider>();
   }
+  
+  // Initialize the singleton
+  static getInstance(): AIManager {
+    if (!AIManager.instance) {
+      AIManager.instance = new AIManager();
+    }
+    return AIManager.instance;
+  }
+  
+  private static instance: AIManager;
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -315,8 +325,7 @@ export class AIManager {
           userId: params.userId,
           provider: provider.constructor.name.replace('Provider', ''),
           requestType: 'text',
-          requestCount: 1,
-          status: 'success'
+          timestamp: new Date()
         });
       }
       
@@ -368,8 +377,7 @@ export class AIManager {
           userId: params.userId,
           provider: provider.constructor.name.replace('Provider', ''),
           requestType: 'image',
-          requestCount: 1,
-          status: 'success'
+          timestamp: new Date()
         });
       }
       
@@ -421,8 +429,7 @@ export class AIManager {
           userId: params.userId,
           provider: provider.constructor.name.replace('Provider', ''),
           requestType: 'tts',
-          requestCount: 1,
-          status: 'success'
+          timestamp: new Date()
         });
       }
       
@@ -474,8 +481,7 @@ export class AIManager {
           userId: params.userId,
           provider: provider.constructor.name.replace('Provider', ''),
           requestType: 'video',
-          requestCount: 1,
-          status: 'success'
+          timestamp: new Date()
         });
       }
       
