@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import { 
   MessageSquare, 
   Image, 
@@ -15,10 +17,82 @@ import {
   CheckCircle,
   MessageCircle,
   Save,
-  Share2
+  Share2,
+  Loader2
 } from "lucide-react";
+import axios from "axios";
 
 export default function PromptArsenalPage() {
+  // State for form values
+  const [platform, setPlatform] = useState("Twitter/X");
+  const [contentType, setContentType] = useState("Engagement Post");
+  const [keywords, setKeywords] = useState("");
+  const [tone, setTone] = useState("Professional");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState("");
+  const [generatedContentType, setGeneratedContentType] = useState("");
+  const [generationTime, setGenerationTime] = useState("");
+  const { toast } = useToast();
+
+  // Function to generate content using the AI API
+  const generateContent = async () => {
+    if (!keywords) {
+      toast({
+        title: "Missing information",
+        description: "Please enter topic or keywords for your content",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    
+    try {
+      // Build the prompt based on selected options
+      const prompt = `Create a ${tone.toLowerCase()} ${platform} ${contentType.toLowerCase()} about "${keywords}". 
+      Make it engaging, shareable, and optimized for the platform.
+      Include appropriate hashtags and calls to action if needed.`;
+      
+      // Call the API
+      const response = await axios.post("/api/ai/generate/text", {
+        prompt: prompt,
+        model: "deepseek/deepseek-chat-v3-0324:free", // Using our DeepSeek provider
+        temperature: 0.7
+      });
+      
+      if (response.data.success) {
+        setGeneratedContent(response.data.data);
+        setGeneratedContentType(`${platform} ${contentType}`);
+        setGenerationTime(new Date().toLocaleTimeString());
+        
+        toast({
+          title: "Content generated!",
+          description: "Your marketing content has been created successfully.",
+        });
+      } else {
+        throw new Error(response.data.error?.message || "Failed to generate content");
+      }
+    } catch (error) {
+      console.error("Error generating content:", error);
+      toast({
+        title: "Generation failed",
+        description: error.message || "There was an error generating your content. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Function to copy text to clipboard
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied to clipboard",
+      description: "Content has been copied to your clipboard",
+    });
+  };
+
   return (
     <div className="container mx-auto py-6 px-4 md:px-6">
       <header className="mb-8">
@@ -53,37 +127,57 @@ export default function PromptArsenalPage() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Platform</label>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm">Twitter/X</Button>
-                      <Button variant="outline" size="sm">Instagram</Button>
-                      <Button variant="outline" size="sm">Facebook</Button>
-                      <Button variant="outline" size="sm">LinkedIn</Button>
-                      <Button variant="outline" size="sm">TikTok</Button>
+                      {["Twitter/X", "Instagram", "Facebook", "LinkedIn", "TikTok"].map((p) => (
+                        <Button 
+                          key={p}
+                          variant={platform === p ? "default" : "outline"} 
+                          size="sm"
+                          onClick={() => setPlatform(p)}
+                        >
+                          {p}
+                        </Button>
+                      ))}
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Content Type</label>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm">Engagement Post</Button>
-                      <Button variant="outline" size="sm">Product Promo</Button>
-                      <Button variant="outline" size="sm">Story/Reel</Button>
-                      <Button variant="outline" size="sm">Thread</Button>
+                      {["Engagement Post", "Product Promo", "Story/Reel", "Thread"].map((type) => (
+                        <Button 
+                          key={type}
+                          variant={contentType === type ? "default" : "outline"} 
+                          size="sm"
+                          onClick={() => setContentType(type)}
+                        >
+                          {type}
+                        </Button>
+                      ))}
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Topic or Keywords</label>
-                    <Input placeholder="Enter topic or keywords" />
+                    <Input 
+                      placeholder="Enter topic or keywords" 
+                      value={keywords}
+                      onChange={(e) => setKeywords(e.target.value)}
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Tone</label>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm">Professional</Button>
-                      <Button variant="outline" size="sm">Casual</Button>
-                      <Button variant="outline" size="sm">Humorous</Button>
-                      <Button variant="outline" size="sm">Inspirational</Button>
-                      <Button variant="outline" size="sm">Educational</Button>
+                      {["Professional", "Casual", "Humorous", "Inspirational", "Educational"].map((t) => (
+                        <Button 
+                          key={t}
+                          variant={tone === t ? "default" : "outline"} 
+                          size="sm"
+                          onClick={() => setTone(t)}
+                        >
+                          {t}
+                        </Button>
+                      ))}
                     </div>
                   </div>
 
@@ -92,9 +186,21 @@ export default function PromptArsenalPage() {
                       <SlidersHorizontal className="mr-2 h-4 w-4" />
                       Advanced Options
                     </Button>
-                    <Button>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Generate Content
+                    <Button 
+                      onClick={generateContent}
+                      disabled={isGenerating || !keywords}
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Generate Content
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -113,7 +219,21 @@ export default function PromptArsenalPage() {
                   <div className="border rounded-lg p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-medium">Engagement Booster</h4>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setKeywords("marketing strategy tips");
+                          setPlatform("Twitter/X");
+                          setContentType("Engagement Post");
+                          setTone("Inspirational");
+                          toast({
+                            title: "Template loaded",
+                            description: "Engagement Booster template applied",
+                          });
+                        }}
+                      >
                         <Copy className="h-4 w-4" />
                       </Button>
                     </div>
@@ -127,7 +247,21 @@ export default function PromptArsenalPage() {
                   <div className="border rounded-lg p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-medium">Product Launch</h4>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setKeywords("new product announcement benefits");
+                          setPlatform("Instagram");
+                          setContentType("Product Promo");
+                          setTone("Professional");
+                          toast({
+                            title: "Template loaded",
+                            description: "Product Launch template applied",
+                          });
+                        }}
+                      >
                         <Copy className="h-4 w-4" />
                       </Button>
                     </div>
@@ -158,40 +292,54 @@ export default function PromptArsenalPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="border rounded-lg p-4 bg-muted/20">
-                <div className="flex justify-between mb-4">
-                  <div className="flex items-center">
-                    <CheckCircle className="text-green-500 mr-2 h-5 w-5" />
-                    <span className="font-medium">Twitter Engagement Post</span>
+              {generatedContent ? (
+                <div className="border rounded-lg p-4 bg-muted/20">
+                  <div className="flex justify-between mb-4">
+                    <div className="flex items-center">
+                      <CheckCircle className="text-green-500 mr-2 h-5 w-5" />
+                      <span className="font-medium">{generatedContentType}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => copyToClipboard(generatedContent)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon">
+                        <Save className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon">
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon">
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                      <Save className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                      <Share2 className="h-4 w-4" />
+                  <Textarea 
+                    className="min-h-[100px] mb-4"
+                    value={generatedContent}
+                    readOnly
+                  />
+                  <div className="flex justify-between">
+                    <div className="text-sm text-muted-foreground">Generated at {generationTime}</div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={generateContent}
+                      disabled={isGenerating}
+                    >
+                      {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Regenerate
                     </Button>
                   </div>
                 </div>
-                <Textarea 
-                  className="min-h-[100px] mb-4"
-                  value="Looking to level up your marketing game? 🚀
-
-The one strategy most businesses overlook is consistency in their content calendar.
-
-What's your biggest challenge with staying consistent?
-
-#MarketingTips #ContentStrategy"
-                  readOnly
-                />
-                <div className="flex justify-between">
-                  <div className="text-sm text-muted-foreground">Generated 2 minutes ago</div>
-                  <Button variant="outline" size="sm">Regenerate</Button>
+              ) : (
+                <div className="border rounded-lg p-6 text-center text-muted-foreground">
+                  <MessageSquare className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                  <p>Your generated content will appear here</p>
+                  <p className="text-sm mt-1">Fill out the form and click "Generate Content"</p>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -53,9 +53,10 @@ export class DeepSeekProvider extends AIProvider {
       baseURL: this.baseUrl,
       apiKey: this.apiKey,
       defaultHeaders: {
-        "HTTP-Referer": "https://marketingsaasapp.replit.app",
+        "HTTP-Referer": "https://marketingsaasapp.replit.app", 
         "X-Title": "MarketingSaaS"
-      }
+      },
+      dangerouslyAllowBrowser: true // Add this flag to allow browser usage
     });
   }
 

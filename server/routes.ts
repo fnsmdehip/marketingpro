@@ -134,13 +134,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pythonProcess = spawn('python', ['-c', `
 import sys
 import trafilatura
+import requests
 
 try:
-    # Send a request to the website with a custom user agent
-    downloaded = trafilatura.fetch_url(
-        "${url}",
-        custom_user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    )
+    # Set up a session with custom headers
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Referer": "https://www.google.com/",
+        "DNT": "1"
+    })
+    
+    # Try to download with our custom session
+    try:
+        response = session.get("${url}", timeout=10)
+        downloaded = response.text
+    except Exception as e:
+        print(f"Error with requests: {str(e)}", file=sys.stderr)
+        # Fall back to trafilatura's built-in downloader
+        downloaded = trafilatura.fetch_url("${url}")
+    
+    # Extract the main content
     text = trafilatura.extract(downloaded)
     if text:
         print(text)
