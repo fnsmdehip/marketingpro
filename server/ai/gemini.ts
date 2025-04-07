@@ -83,8 +83,27 @@ export class GeminiProvider extends AIProvider {
       };
     }
     
-    // Default model if not specified - use 2.5 Pro as the primary model
-    const model = params.model || 'gemini-1.5-pro';
+    // Default model if not specified, or handle model fallback sequence
+    let model = params.model;
+    
+    // If no model specified, use fallback sequence to avoid rate limit issues
+    if (!model) {
+      // Try each model in sequence as a fallback mechanism
+      // The sequence is from newest/best to older but more reliable models
+      const modelSequence = [
+        'gemini-2.5-pro', // Try most capable model first
+        'gemini-1.5-pro', // First fallback if 2.5 is rate limited
+        'gemini-1.0-pro', // Second fallback if both newer ones are rate limited
+        'gemini-flash'    // Last resort - fastest but less capable model
+      ];
+      
+      // Use the model from the first parameter, or first in sequence
+      model = modelSequence[0];
+      
+      // Store the fallback sequence for potential retry
+      (params as any).modelFallbackSequence = modelSequence;
+      (params as any).currentModelIndex = 0;
+    }
     
     // Validate model for security
     if (!this.validateModelSecurity(model)) {
@@ -186,7 +205,31 @@ export class GeminiProvider extends AIProvider {
           
           // Check if content was blocked for safety reasons
           if (generatedText.toLowerCase().includes('cannot fulfill') || 
-              generatedText.toLowerCase().includes('unable to provide')) {
+              generatedText.toLowerCase().includes('unable to provide') ||
+              generatedText.toLowerCase().includes('i cannot generate') ||
+              generatedText.toLowerCase().includes('prohibited by my')) {
+            
+            // Try a different model if we have fallbacks
+            if ((params as any).modelFallbackSequence && Array.isArray((params as any).modelFallbackSequence)) {
+              const fallbackSequence = (params as any).modelFallbackSequence;
+              let currentIndex = (params as any).currentModelIndex || 0;
+              
+              // Try the next model in sequence
+              if (currentIndex < fallbackSequence.length - 1) {
+                currentIndex++;
+                const nextModel = fallbackSequence[currentIndex];
+                console.log(`[Gemini] Safety block on model ${model}. Trying fallback model: ${nextModel}`);
+                
+                // Update params for the next attempt
+                params.model = nextModel;
+                (params as any).currentModelIndex = currentIndex;
+                
+                // Retry with the new model
+                return this.textGeneration(params);
+              }
+            }
+            
+            // If no fallback models or all exhausted, report safety block
             return {
               success: false,
               error: {
@@ -247,6 +290,27 @@ export class GeminiProvider extends AIProvider {
           (typeof errorData === 'string' && 
            errorData.toLowerCase().includes('safety'))
         ) {
+          // Try a different model if we have fallbacks
+          if ((params as any).modelFallbackSequence && Array.isArray((params as any).modelFallbackSequence)) {
+            const fallbackSequence = (params as any).modelFallbackSequence;
+            let currentIndex = (params as any).currentModelIndex || 0;
+            
+            // Try the next model in sequence
+            if (currentIndex < fallbackSequence.length - 1) {
+              currentIndex++;
+              const nextModel = fallbackSequence[currentIndex];
+              console.log(`[Gemini] Safety filter error on model ${model}. Trying fallback model: ${nextModel}`);
+              
+              // Update params for the next attempt
+              params.model = nextModel;
+              (params as any).currentModelIndex = currentIndex;
+              
+              // Retry with the new model
+              return this.textGeneration(params);
+            }
+          }
+          
+          // If no fallback models or all exhausted, report safety block
           return {
             success: false,
             error: {
@@ -259,12 +323,33 @@ export class GeminiProvider extends AIProvider {
         }
       }
       
-      // If it's a rate limit error, also mark it for fallback
+      // If it's a rate limit error, try a different model if possible
       if (error.response && error.response.status === 429) {
+        // Check if we have fallback models to try
+        if ((params as any).modelFallbackSequence && Array.isArray((params as any).modelFallbackSequence)) {
+          const fallbackSequence = (params as any).modelFallbackSequence;
+          let currentIndex = (params as any).currentModelIndex || 0;
+          
+          // Try the next model in sequence
+          if (currentIndex < fallbackSequence.length - 1) {
+            currentIndex++;
+            const nextModel = fallbackSequence[currentIndex];
+            console.log(`[Gemini] Rate limit hit on model ${model}. Trying fallback model: ${nextModel}`);
+            
+            // Update params for the next attempt
+            params.model = nextModel;
+            (params as any).currentModelIndex = currentIndex;
+            
+            // Retry with the new model
+            return this.textGeneration(params);
+          }
+        }
+        
+        // If no fallback models or all exhausted, report the rate limit
         return {
           success: false,
           error: {
-            message: 'Rate limit exceeded for Gemini API',
+            message: 'Rate limit exceeded for all Gemini API models',
             code: 'rate_limit',
             retryAfter: 60
           },

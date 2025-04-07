@@ -21,6 +21,7 @@ import ConversionTacticsPage from "@/pages/marketing-tools/conversion-tactics";
 import GrowthEnginesPage from "@/pages/marketing-tools/growth-engines";
 import PromptArsenalPage from "@/pages/marketing-tools/prompt-arsenal";
 import WebScraperPage from "@/pages/marketing-tools/web-scraper-page";
+import ContentResearchPage from "@/pages/marketing-tools/content-research";
 
 function Router() {
   return (
@@ -65,6 +66,9 @@ function Router() {
       </Route>
       <Route path="/marketing/web-scraper">
         <ProtectedRoute path="/marketing/web-scraper" component={WebScraperPage} />
+      </Route>
+      <Route path="/marketing/content-research">
+        <ProtectedRoute path="/marketing/content-research" component={ContentResearchPage} />
       </Route>
       
       {/* Fallback to 404 */}

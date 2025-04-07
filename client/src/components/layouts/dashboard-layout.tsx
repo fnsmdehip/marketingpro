@@ -107,6 +107,11 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
           href: "/marketing/web-scraper",
           active: location === "/marketing/web-scraper",
         },
+        {
+          name: "Content Research",
+          href: "/marketing/content-research",
+          active: location === "/marketing/content-research",
+        },
       ],
     },
   ];
