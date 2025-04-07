@@ -183,12 +183,11 @@ export class AIManager {
               await storage.createAiUsage({
                 userId: params.userId,
                 provider: providerName,
-                model: response.model || params.model || 'unknown',
+                requestType: 'text', // Set request type for database constraint
                 promptTokens: response.usage?.promptTokens || 0,
                 completionTokens: response.usage?.completionTokens || 0,
                 totalTokens: response.usage?.totalTokens || 0,
-                cost: 0, // Calculate actual cost based on model pricing
-                type: 'text'
+                cost: 0 // Calculate actual cost based on model pricing
               });
               
               // Increment provider usage counter

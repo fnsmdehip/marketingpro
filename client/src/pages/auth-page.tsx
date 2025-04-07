@@ -103,7 +103,25 @@ export default function AuthPage() {
       <div className="flex flex-col justify-center items-center w-full max-w-md p-8">
         <div className="w-full max-w-md">
           <h1 className="text-3xl font-bold mb-2">Marketing Pro</h1>
-          <p className="text-gray-500 mb-8">Sign in to your account or create a new one</p>
+          <p className="text-gray-500 mb-4">Sign in to your account or create a new one</p>
+          
+          {/* Prominent Quick Demo Button */}
+          <div className="mb-6">
+            <Button 
+              type="button"
+              variant="default"
+              className="w-full py-6 text-lg font-medium" 
+              onClick={() => {
+                loginMutation.mutate({
+                  username: "demo",
+                  password: "demo123",
+                  oneClickLogin: true
+                });
+              }}
+            >
+              ✨ Quick Demo Access (No Registration Required) ✨
+            </Button>
+          </div>
 
           <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
@@ -154,19 +172,20 @@ export default function AuthPage() {
                         {loginMutation.isPending ? "Signing in..." : "Sign In"}
                       </Button>
                       
-                      {/* One-click login for development */}
+                      {/* One-click demo login */}
                       <Button 
                         type="button"
                         variant="outline"
-                        className="w-full mt-2" 
+                        className="w-full mt-4" 
                         onClick={() => {
                           loginMutation.mutate({
-                            username: "dev",
-                            password: "password123"
+                            username: "demo",
+                            password: "demo123",
+                            oneClickLogin: true
                           });
                         }}
                       >
-                        Dev Login (One-Click)
+                        Try Demo (One-Click Login)
                       </Button>
                     </form>
                   </Form>
@@ -268,22 +287,24 @@ export default function AuthPage() {
                         {registerMutation.isPending ? "Creating Account..." : "Create Account"}
                       </Button>
                       
-                      {/* One-click register for development */}
+                      {/* One-click demo button that redirects to login tab */}
                       <Button 
                         type="button"
                         variant="outline"
-                        className="w-full mt-2" 
+                        className="w-full mt-4" 
                         onClick={() => {
-                          const devUser = {
-                            username: "dev",
-                            password: "password123",
-                            email: "dev@example.com",
-                            fullName: "Dev User"
-                          };
-                          registerMutation.mutate(devUser);
+                          setActiveTab("login");
+                          // Slight delay to ensure tab change completes
+                          setTimeout(() => {
+                            loginMutation.mutate({
+                              username: "demo",
+                              password: "demo123",
+                              oneClickLogin: true
+                            });
+                          }, 100);
                         }}
                       >
-                        Dev Register (One-Click)
+                        Try Demo Instead (One-Click)
                       </Button>
                     </form>
                   </Form>

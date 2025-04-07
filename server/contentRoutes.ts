@@ -74,12 +74,14 @@ router.get('/api/content/:id', isAuthenticated, async (req: Request, res: Respon
 // Create new content
 router.post('/api/content', isAuthenticated, async (req: Request, res: Response) => {
   try {
-    // Create a modified schema with updated fields
-    const contentValidationSchema = insertContentSchema.extend({
+    // Create a modified schema with updated fields - make userId optional as we'll set it from session
+    const contentValidationSchema = insertContentSchema.omit({ userId: true }).extend({
       body: z.string().optional().default(''),
       platforms: z.array(z.string()).optional().default([]),
       mediaUrls: z.array(z.string()).optional().default([]),
-      metadata: z.record(z.any()).optional().default({})
+      metadata: z.record(z.any()).optional().default({}),
+      scheduledDate: z.string().optional().pipe(z.coerce.date().optional()),
+      publishedDate: z.string().optional().pipe(z.coerce.date().optional())
     });
     
     // Validate request body against schema
@@ -134,8 +136,30 @@ router.put('/api/content/:id', isAuthenticated, async (req: Request, res: Respon
       return res.status(403).json({ message: 'Forbidden: Content belongs to another user' });
     }
     
+    // Update schema to handle date conversions
+    const updateValidationSchema = z.object({
+      title: z.string().optional(),
+      body: z.string().optional(),
+      contentType: z.string().optional(),
+      status: z.string().optional(),
+      scheduledDate: z.string().optional().pipe(z.coerce.date().optional()),
+      publishedDate: z.string().optional().pipe(z.coerce.date().optional()),
+      platforms: z.array(z.string()).optional(),
+      mediaUrls: z.array(z.string()).optional(),
+      metadata: z.record(z.any()).optional()
+    });
+    
+    // Validate request body
+    const validationResult = updateValidationSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({ 
+        message: 'Invalid update data', 
+        errors: validationResult.error.errors 
+      });
+    }
+    
     // Update content
-    const updatedContent = await storage.updateContent(contentId, req.body);
+    const updatedContent = await storage.updateContent(contentId, validationResult.data);
     res.json(updatedContent);
   } catch (error: any) {
     console.error('Error updating content:', error);
