@@ -112,18 +112,62 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Invalid credentials" });
+    // Check for one-click login option
+    const isOneClickLogin = req.body.oneClickLogin === true;
+    
+    if (isOneClickLogin) {
+      // For one-click login, we use a demo account
+      const demoUsername = "demo";
+      const demoPassword = "demo123";
       
-      req.login(user, (err) => {
+      // Find the demo user manually instead of using passport
+      (async () => {
+        try {
+          // Try to find demo user
+          let demoUser = await storage.getUserByUsername(demoUsername);
+          
+          if (!demoUser) {
+            // If demo user doesn't exist, create it
+            console.log("Demo user doesn't exist, creating one...");
+            demoUser = await storage.createUser({
+              username: demoUsername,
+              email: "demo@example.com",
+              password: await hashPassword(demoPassword),
+              name: "Demo User",
+              role: "user",
+              preferences: {}
+            });
+            console.log("Created demo user:", demoUser.id);
+          }
+          
+          // Log the user in
+          req.login(demoUser, (err) => {
+            if (err) return next(err);
+            
+            // Remove password from response
+            const { password, ...userWithoutPassword } = demoUser;
+            res.status(200).json(userWithoutPassword);
+          });
+        } catch (error) {
+          console.error("Error in one-click login:", error);
+          next(error);
+        }
+      })();
+    } else {
+      // Normal login flow using passport
+      passport.authenticate("local", (err, user, info) => {
         if (err) return next(err);
+        if (!user) return res.status(401).json({ message: "Invalid credentials" });
         
-        // Remove password from response
-        const { password, ...userWithoutPassword } = user;
-        res.status(200).json(userWithoutPassword);
-      });
-    })(req, res, next);
+        req.login(user, (err) => {
+          if (err) return next(err);
+          
+          // Remove password from response
+          const { password, ...userWithoutPassword } = user;
+          res.status(200).json(userWithoutPassword);
+        });
+      })(req, res, next);
+    }
   });
 
   app.post("/api/logout", (req, res, next) => {

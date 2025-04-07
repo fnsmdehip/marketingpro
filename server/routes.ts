@@ -139,21 +139,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Set a timeout for the scraping operation - 15 seconds max
-      const timeoutMs = 15000; 
-      
-      // Check if the URL is from a site that likely blocks scraping
-      const blockedDomains = ['amazon.com', 'amazon.', 'linkedin.com', 'facebook.com', 'instagram.com'];
-      const isBlockedDomain = blockedDomains.some(domain => url.includes(domain));
-      
-      if (isBlockedDomain) {
+      // Validate URL
+      try {
+        new URL(url);
+      } catch (e) {
         return res.status(400).json({
           success: false,
-          error: { 
-            message: "This website likely blocks scraping attempts. Try a different URL that allows content extraction." 
-          }
+          error: { message: "Invalid URL format" }
         });
       }
+      
+      // Set a timeout for the scraping operation - 30 seconds max
+      const timeoutMs = 30000; 
       
       // Execute Python script to scrape the website with timeout
       const { spawn } = await import('child_process');
@@ -163,43 +160,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         setTimeout(() => reject(new Error('Scraping timed out')), timeoutMs);
       });
       
-      // Create a promise for the scraping process
+      // Create a promise for the scraping process using our enhanced web_scraper.py
       const scrapingPromise = new Promise((resolve, reject) => {
-        const pythonProcess = spawn('python', ['-c', `
-import sys
-import trafilatura
-import requests
-
-try:
-    # Set up a session with custom headers
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Referer": "https://www.google.com/",
-        "DNT": "1"
-    })
-    
-    # Try to download with our custom session
-    try:
-        response = session.get("${url}", timeout=10)
-        downloaded = response.text
-    except Exception as e:
-        print(f"Error with requests: {str(e)}", file=sys.stderr)
-        # Fall back to trafilatura's built-in downloader
-        downloaded = trafilatura.fetch_url("${url}")
-    
-    # Extract the main content
-    text = trafilatura.extract(downloaded)
-    if text:
-        print(text)
-    else:
-        print("No content extracted from the URL")
-except Exception as e:
-    print(f"Error: {str(e)}", file=sys.stderr)
-    sys.exit(1)
-        `]);
+        // Use the dedicated web_scraper.py file that has enhanced capabilities
+        const pythonProcess = spawn('python', ['server/web_scraper.py', url]);
         
         let stdout = '';
         let stderr = '';
@@ -229,10 +193,17 @@ except Exception as e:
       try {
         const data = await Promise.race([scrapingPromise, timeoutPromise]) as string;
         
-        if (data.includes("No content extracted from the URL")) {
-          return res.status(200).json({
-            success: true,
-            data: "No content could be extracted. The website may be blocking scraping or has no main content."
+        // Check for common error messages or empty content
+        if (!data || 
+            data.trim().length === 0 || 
+            data.includes("No content extracted") || 
+            data.includes("Failed to extract meaningful content")) {
+          
+          return res.status(404).json({
+            success: false,
+            error: { 
+              message: "No meaningful content could be extracted from this URL. The site may have anti-scraping protections." 
+            }
           });
         }
         
@@ -242,16 +213,26 @@ except Exception as e:
         });
       } catch (error: any) {
         console.error('Scraping error:', error.message);
+        
+        // Provide more helpful error messages based on common issues
+        let userFriendlyMessage = "Failed to scrape website.";
+        
         if (error.message === 'Scraping timed out') {
-          return res.status(408).json({
-            success: false,
-            error: { message: "Scraping operation timed out. The website may be too large or blocking our request." }
-          });
+          userFriendlyMessage = "Scraping operation timed out. The website may be too large or blocking our request.";
+        } else if (error.message.includes("403") || error.message.includes("Forbidden")) {
+          userFriendlyMessage = "This website is actively blocking scraping attempts. Try a different website.";
+        } else if (error.message.includes("404") || error.message.includes("Not Found")) {
+          userFriendlyMessage = "The requested page was not found. Please check the URL and try again.";
+        } else if (error.message.includes("Certificate") || error.message.includes("SSL")) {
+          userFriendlyMessage = "There was a security issue connecting to this website. Try a different URL.";
         }
         
         return res.status(500).json({
           success: false,
-          error: { message: `Error scraping website: ${error.message}` }
+          error: { 
+            message: userFriendlyMessage,
+            details: error.message || "Unknown error" 
+          }
         });
       }
     } catch (error: any) {

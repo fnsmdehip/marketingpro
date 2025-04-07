@@ -108,8 +108,10 @@ export class GeminiProvider extends AIProvider {
         'gemini-2.5-flash',  // Faster newer model
         'gemini-2.0-pro',    // Alternative model if 2.5 is rate limited
         'gemini-2.0-flash',  // Faster model option
-        'gemini-1.5-pro',    // Most reliable model, good fallback
-        'gemini-1.0-pro'     // Last resort - oldest but most stable model
+        'gemini-1.5-pro',    // Reliable model, good general fallback
+        'gemini-1.5-flash',  // Faster 1.5 option
+        'gemini-1.0-pro',    // Older but stable model
+        'gemini-pro'         // Last resort - legacy model name for compatibility
       ];
       
       // Use the model from the first parameter, or first in sequence
