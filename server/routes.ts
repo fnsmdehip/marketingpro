@@ -33,13 +33,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: { message: "Prompt is required" }
         });
       }
-
+      
+      console.log("[AI Generate Text] Request received:", {
+        promptLength: prompt.length,
+        model: model || "default model",
+        temperature: temperature || "default temp"
+      });
+      
+      // Load context file for AI guidance
+      let contextGuidelines = "";
+      try {
+        // Read context guidelines from the documentation file
+        const fs = require('fs');
+        const path = require('path');
+        contextGuidelines = fs.readFileSync(path.join(__dirname, '../docs/context-guidelines.md'), 'utf8');
+        console.log("[AI Generate Text] Loaded context guidelines successfully");
+      } catch (error: any) {
+        const contextError = error as Error;
+        console.warn("[AI Generate Text] Could not load context guidelines:", contextError.message);
+        // Proceed without context guidelines
+      }
+      
+      // Add context to the prompt if available
+      let enhancedPrompt = prompt;
+      if (contextGuidelines) {
+        enhancedPrompt = `<context>\n${contextGuidelines}\n</context>\n\nPlease follow the guidelines above when generating the following content:\n\n${prompt}`;
+      }
+      
+      // Generate text with enhanced prompt
+      console.log("[AI Generate Text] Sending request to AI Manager");
       const result = await aiManager.generateText({
-        prompt,
+        prompt: enhancedPrompt,
         model,
         temperature: temperature || 0.7,
         userId: req.user?.id || userId
       });
+      
+      if (result.success) {
+        console.log("[AI Generate Text] Generated content successfully, length:", result.data?.length || 0);
+      } else {
+        console.error("[AI Generate Text] Failed to generate content:", result.error);
+      }
 
       return res.json(result);
     } catch (error: any) {

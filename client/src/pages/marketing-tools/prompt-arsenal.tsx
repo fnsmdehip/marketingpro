@@ -48,12 +48,37 @@ export default function PromptArsenalPage() {
     setIsGenerating(true);
     
     try {
-      // Build the prompt based on selected options
-      const prompt = `Create a ${tone.toLowerCase()} ${platform} ${contentType.toLowerCase()} about "${keywords}". 
-      Make it engaging, shareable, and optimized for the platform.
-      Include appropriate hashtags and calls to action if needed.`;
+      // First check if there's scraped content in localStorage
+      const scrapedContent = localStorage.getItem('scrapedContent');
+      let contextualInfo = '';
       
-      // Call the API
+      if (scrapedContent) {
+        const lastScrapedURL = localStorage.getItem('lastScrapedURL') || 'a website';
+        contextualInfo = `\nReference this content from ${lastScrapedURL} for context and facts (don't copy directly, just use relevant information):\n${scrapedContent.substring(0, 500)}...\n`;
+        console.log("Added scraped content as context");
+      }
+      
+      // Build the prompt based on selected options with detailed context
+      const prompt = `Create a ${tone.toLowerCase()} ${platform} ${contentType.toLowerCase()} about "${keywords}".
+      
+      Platform-specific details:
+      ${platform === "Twitter/X" ? "- Keep it under 280 characters\n- Use 1-2 relevant hashtags\n- Make it conversation-starting" : ""}
+      ${platform === "Instagram" ? "- Visual-focused language\n- Include emoji suggestions for visual appeal\n- Consider where a CTA would go" : ""}
+      ${platform === "LinkedIn" ? "- Professional tone with industry insights\n- Focus on value proposition\n- Include a question to drive engagement" : ""}
+      ${platform === "Facebook" ? "- Conversational and community-focused\n- Slightly longer format is acceptable\n- Design for engagement metrics" : ""}
+      ${platform === "TikTok" ? "- Ultra-concise and attention-grabbing\n- Trend-aware phrasing\n- Focus on hook within first sentence" : ""}
+      
+      Content requirements:
+      - Make it engaging, shareable, and optimized for ${platform}
+      - Use a ${tone.toLowerCase()} tone throughout
+      - Include appropriate hashtags and calls to action
+      - Focus on benefits rather than features
+      - Create a compelling hook
+      ${contextualInfo}
+      
+      The content should feel authentic and native to ${platform}, as if created by a marketing expert who specializes in this platform.`;
+      
+      // Call the API - our server will automatically add the context guidelines
       const response = await axios.post("/api/ai/generate/text", {
         prompt: prompt,
         model: "deepseek/deepseek-chat-v3-0324:free", // Using our DeepSeek provider
@@ -74,9 +99,10 @@ export default function PromptArsenalPage() {
       }
     } catch (error) {
       console.error("Error generating content:", error);
+      const errorMessage = error instanceof Error ? error.message : "There was an error generating your content. Please try again.";
       toast({
         title: "Generation failed",
-        description: error.message || "There was an error generating your content. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -85,7 +111,7 @@ export default function PromptArsenalPage() {
   };
 
   // Function to copy text to clipboard
-  const copyToClipboard = (text) => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
       title: "Copied to clipboard",

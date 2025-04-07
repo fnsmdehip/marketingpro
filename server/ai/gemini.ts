@@ -102,6 +102,10 @@ export class GeminiProvider extends AIProvider {
     const sanitizedPrompt = this.sanitizeInput(params.prompt);
     
     try {
+      console.log("[Gemini Debug] Starting text generation with model:", model);
+      console.log("[Gemini Debug] API Key format:", this.apiKey ? `${this.apiKey.substring(0, 10)}...` : "No API key");
+      console.log("[Gemini Debug] Base URL:", this.baseUrl);
+
       // Reframe marketing prompts to avoid Gemini security restrictions
       let finalPrompt = sanitizedPrompt;
       const lowerPrompt = sanitizedPrompt.toLowerCase();
@@ -118,99 +122,123 @@ export class GeminiProvider extends AIProvider {
         This is purely for educational purposes to understand effective communication techniques.`;
       }
       
-      const response = await axios({
-        method: 'POST',
-        url: `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`,
-        headers: {
-          'Content-Type': 'application/json'
+      const requestData = {
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: finalPrompt }]
+          }
+        ],
+        generationConfig: {
+          temperature: params.temperature || 0.7,
+          maxOutputTokens: params.maxTokens || 1024,
+          topP: 0.95,
+          topK: 64
         },
-        data: {
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: finalPrompt }]
-            }
-          ],
-          generationConfig: {
-            temperature: params.temperature || 0.7,
-            maxOutputTokens: params.maxTokens || 1024,
-            topP: 0.95,
-            topK: 64
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE" 
           },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE" 
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
-        },
-        timeout: 30000 // 30 second timeout
-      });
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
+      };
       
-      this.handleSuccess();
+      console.log("[Gemini Debug] Request data:", JSON.stringify(requestData, null, 2));
+      console.log("[Gemini Debug] Request URL:", `${this.baseUrl}/models/${model}:generateContent?key=API_KEY_HIDDEN`);
       
-      // Check if we got a proper response
-      if (response.data.candidates && 
-          response.data.candidates[0] && 
-          response.data.candidates[0].content && 
-          response.data.candidates[0].content.parts &&
-          response.data.candidates[0].content.parts[0] &&
-          response.data.candidates[0].content.parts[0].text) {
+      try {
+        const response = await axios({
+          method: 'POST',
+          url: `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          data: requestData,
+          timeout: 30000 // 30 second timeout
+        });
         
-        // Extract the text content from the response
-        const generatedText = response.data.candidates[0].content.parts[0].text;
+        console.log("[Gemini Debug] Response received:", JSON.stringify(response.data, null, 2));
         
-        // Check if content was blocked for safety reasons
-        if (generatedText.toLowerCase().includes('cannot fulfill') || 
-            generatedText.toLowerCase().includes('unable to provide')) {
+        this.handleSuccess();
+        
+        // Check if we got a proper response
+        if (response.data.candidates && 
+            response.data.candidates[0] && 
+            response.data.candidates[0].content && 
+            response.data.candidates[0].content.parts &&
+            response.data.candidates[0].content.parts[0] &&
+            response.data.candidates[0].content.parts[0].text) {
+          
+          // Extract the text content from the response
+          const generatedText = response.data.candidates[0].content.parts[0].text;
+          
+          // Check if content was blocked for safety reasons
+          if (generatedText.toLowerCase().includes('cannot fulfill') || 
+              generatedText.toLowerCase().includes('unable to provide')) {
+            return {
+              success: false,
+              error: {
+                message: 'Content blocked by Gemini safety filters - try using DeepSeek or OpenAI',
+                code: 'safety_blocked'
+              },
+              provider: 'gemini',
+              rateLimited: true // Mark as rate limited to try another provider
+            };
+          }
+          
+          const result: ProviderResponse = {
+            success: true,
+            data: generatedText,
+            provider: 'gemini'
+          };
+          
+          return result;
+        } else {
+          console.log("[Gemini Debug] Response structure issue - no valid content found");
+          // No valid content in response
           return {
             success: false,
             error: {
-              message: 'Content blocked by Gemini safety filters - try using DeepSeek or OpenAI',
-              code: 'safety_blocked'
+              message: 'No valid content in response - try using DeepSeek or OpenAI',
+              code: 'empty_response'
             },
             provider: 'gemini',
             rateLimited: true // Mark as rate limited to try another provider
           };
         }
+      } catch (axiosError: any) {
+        console.error("[Gemini Debug] Axios Error:", axiosError.message);
         
-        const result: ProviderResponse = {
-          success: true,
-          data: generatedText,
-          provider: 'gemini'
-        };
+        // Log the full error object
+        console.error("[Gemini Debug] Full axios error:", axiosError);
         
-        return result;
-      } else {
-        // No valid content in response
-        return {
-          success: false,
-          error: {
-            message: 'No valid content in response - try using DeepSeek or OpenAI',
-            code: 'empty_response'
-          },
-          provider: 'gemini',
-          rateLimited: true // Mark as rate limited to try another provider
-        };
+        if (axiosError.response) {
+          console.error("[Gemini Debug] Response status:", axiosError.response.status);
+          console.error("[Gemini Debug] Response data:", JSON.stringify(axiosError.response.data, null, 2));
+        }
+        
+        throw axiosError; // Re-throw to be caught by outer catch
       }
     } catch (error: any) {
       this.handleFailure(error);
+      console.error("[Gemini Provider] Error:", error.message);
       
       // Check specific error types for better handling
       if (error.response && error.response.data) {
         const errorData = error.response.data;
+        console.error("[Gemini Debug] Error response data:", JSON.stringify(errorData, null, 2));
         
         // Check for safety filter blocks
         if (

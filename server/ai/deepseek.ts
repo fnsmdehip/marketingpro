@@ -8,6 +8,7 @@ import {
   ProviderVideoParams
 } from "./provider";
 import { OpenAI } from "openai";
+import util from 'util';
 
 export class DeepSeekProvider extends AIProvider {
   private apiKey: string;
@@ -57,7 +58,7 @@ export class DeepSeekProvider extends AIProvider {
         "X-Title": "MarketingSaaS"
       },
       dangerouslyAllowBrowser: true // Add this flag to allow browser usage
-    });
+    } as any); // Type assertion to bypass type checking issues
   }
 
   // Check if circuit breaker is open (service considered down)
@@ -157,8 +158,12 @@ export class DeepSeekProvider extends AIProvider {
     }
     
     try {
+      console.log("[DeepSeek Debug] Sending request to OpenRouter with model:", model);
+      console.log("[DeepSeek Debug] API Key format:", this.apiKey ? `${this.apiKey.substring(0, 10)}...${this.apiKey.substring(this.apiKey.length-5)}` : "No API key");
+      console.log("[DeepSeek Debug] Base URL:", this.baseUrl);
+      
       // Use OpenAI-compatible client to call OpenRouter API
-      const completion = await this.client.chat.completions.create({
+      const requestOptions = {
         model: model,
         messages: [
           {
@@ -172,20 +177,102 @@ export class DeepSeekProvider extends AIProvider {
         ],
         temperature: params.temperature || 0.7,
         max_tokens: params.maxTokens || 1024
-      });
-      
-      this.handleSuccess();
-      
-      // Extract the generated text from the response
-      const generatedText = completion.choices[0].message.content || '';
-      
-      const result: ProviderResponse = {
-        success: true,
-        data: generatedText,
-        provider: 'deepseek'
       };
       
-      return result;
+      console.log("[DeepSeek Debug] Request options:", JSON.stringify(requestOptions, null, 2));
+      
+      try {
+        // Format the messages array correctly for OpenAI compatible API
+        const formattedMessages = requestOptions.messages.map(msg => {
+          // Ensure message has the right structure
+          return {
+            role: msg.role as "system" | "user" | "assistant",
+            content: msg.content
+          };
+        });
+        
+        // Create properly formatted request for OpenAI compatibility
+        const formattedRequest = {
+          model: requestOptions.model,
+          messages: formattedMessages,
+          temperature: requestOptions.temperature,
+          max_tokens: requestOptions.max_tokens
+        };
+        
+        console.log("[DeepSeek Debug] Formatted request:", JSON.stringify(formattedRequest, null, 2));
+        
+        // Try direct API call to OpenRouter as a fallback option
+        try {
+          console.log("[DeepSeek Debug] Trying direct OpenRouter API call");
+          const directResponse = await axios.post(
+            'https://openrouter.ai/api/v1/chat/completions', 
+            formattedRequest,
+            {
+              headers: {
+                'Authorization': `Bearer ${this.apiKey}`,
+                'HTTP-Referer': 'https://marketingsaasapp.replit.app',
+                'X-Title': 'MarketingSaaS',
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          console.log("[DeepSeek Debug] Direct API Response:", util.inspect(directResponse.data, {depth: null, colors: false}));
+          
+          this.handleSuccess();
+          
+          // Extract the generated text from the direct response
+          const directGeneratedText = directResponse.data.choices[0]?.message?.content || '';
+          
+          return {
+            success: true,
+            data: directGeneratedText,
+            provider: 'deepseek'
+          };
+        } catch (directError: any) {
+          console.error("[DeepSeek Debug] Direct API call failed:", directError.message);
+          if (directError.response) {
+            console.error("[DeepSeek Debug] Direct API Error status:", directError.response.status);
+            console.error("[DeepSeek Debug] Direct API Error data:", 
+              util.inspect(directError.response.data || {}, {depth: null, colors: false}));
+          }
+          
+          // If direct call fails, fallback to OpenAI client
+          console.log("[DeepSeek Debug] Falling back to OpenAI client");
+        }
+        
+        // Make the OpenRouter API call through OpenAI client as fallback
+        const completion = await this.client.chat.completions.create(formattedRequest as any);
+        console.log("[DeepSeek Debug] OpenAI client Response received:", util.inspect(completion, {depth: null, colors: false}));
+        
+        this.handleSuccess();
+        
+        // Extract the generated text from the response
+        const generatedText = completion.choices[0]?.message?.content || '';
+        
+        const result: ProviderResponse = {
+          success: true,
+          data: generatedText,
+          provider: 'deepseek'
+        };
+        
+        return result;
+      } catch (apiError: any) {
+        console.error("[DeepSeek Debug] API Error:", JSON.stringify(apiError, null, 2));
+        console.error("[DeepSeek Debug] Full error object:", apiError);
+        
+        if (apiError.response) {
+          console.error("[DeepSeek Debug] API Response:", apiError.response);
+          try {
+            const responseText = JSON.stringify(apiError.response.data || {});
+            console.error("[DeepSeek Debug] Response data:", responseText);
+          } catch (jsonError) {
+            console.error("[DeepSeek Debug] Error stringifying response:", jsonError);
+          }
+        }
+        
+        throw apiError; // Re-throw to be caught by outer catch
+      }
     } catch (error: any) {
       this.handleFailure(error);
       console.error("[DeepSeek Provider] Error:", error.message);
