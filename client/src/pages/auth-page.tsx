@@ -75,42 +75,15 @@ export default function AuthPage() {
     },
   });
 
-  // Real auth functions using API directly since we're bypassing the hook
-  const loginMutation = useMutation({
-    mutationFn: async (credentials: LoginFormValues) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
-    },
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/user"], user);
-      navigate("/dashboard");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  // Use the auth hook mutations
+  const { user, loginMutation, registerMutation } = useAuth();
   
-  const registerMutation = useMutation({
-    mutationFn: async (values: any) => {
-      const res = await apiRequest("POST", "/api/register", values);
-      return await res.json();
-    },
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/user"], user);
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (user) {
       navigate("/dashboard");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Registration failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+    }
+  }, [user, navigate]);
 
   // Handle login submission
   function onLoginSubmit(values: LoginFormValues) {
@@ -179,6 +152,21 @@ export default function AuthPage() {
                         disabled={loginMutation.isPending}
                       >
                         {loginMutation.isPending ? "Signing in..." : "Sign In"}
+                      </Button>
+                      
+                      {/* One-click login for development */}
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        className="w-full mt-2" 
+                        onClick={() => {
+                          loginMutation.mutate({
+                            username: "dev",
+                            password: "password123"
+                          });
+                        }}
+                      >
+                        Dev Login (One-Click)
                       </Button>
                     </form>
                   </Form>
@@ -278,6 +266,24 @@ export default function AuthPage() {
                         disabled={registerMutation.isPending}
                       >
                         {registerMutation.isPending ? "Creating Account..." : "Create Account"}
+                      </Button>
+                      
+                      {/* One-click register for development */}
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        className="w-full mt-2" 
+                        onClick={() => {
+                          const devUser = {
+                            username: "dev",
+                            password: "password123",
+                            email: "dev@example.com",
+                            fullName: "Dev User"
+                          };
+                          registerMutation.mutate(devUser);
+                        }}
+                      >
+                        Dev Register (One-Click)
                       </Button>
                     </form>
                   </Form>

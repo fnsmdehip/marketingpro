@@ -1,4 +1,4 @@
-import { users, User, InsertUser, contents, Content, InsertContent, platforms, Platform, InsertPlatform, aiUsage, AiUsage, InsertAiUsage, aiProviders, AiProvider, InsertAiProvider } from "@shared/schema";
+import { users, User, InsertUser, contents, Content, InsertContent, platforms, Platform, InsertPlatform, aiUsages, AiUsage, InsertAiUsage, aiProviders, AiProvider, InsertAiProvider } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gt } from "drizzle-orm";
 import session from "express-session";
@@ -37,48 +37,56 @@ export class DatabaseStorage implements IStorage {
       const providers = [
         {
           name: "gemini",
-          endpoint: "gemini-1.5-pro",
-          status: "active",
-          hourlyLimit: 60,
-          dailyLimit: 250
+          isActive: true,
+          config: JSON.stringify({
+            endpoint: "gemini-1.5-pro",
+            hourlyLimit: 60,
+            dailyLimit: 250
+          })
         },
         {
           name: "deepseek",
-          endpoint: "openrouter/deepseek-v3-base",
-          status: "active",
-          hourlyLimit: 50,
-          dailyLimit: 200
+          isActive: true,
+          config: JSON.stringify({
+            endpoint: "openrouter/deepseek-v3-base",
+            hourlyLimit: 50,
+            dailyLimit: 200
+          })
         },
         {
           name: "Hugging Face",
-          endpoint: "huggingface/inference",
-          status: "active",
-          hourlyLimit: 100,
-          dailyLimit: 500
+          isActive: true,
+          config: JSON.stringify({
+            endpoint: "huggingface/inference",
+            hourlyLimit: 100,
+            dailyLimit: 500
+          })
         },
         {
           name: "Replicate",
-          endpoint: "replicate/api",
-          status: "active",
-          hourlyLimit: 20,
-          dailyLimit: 50
+          isActive: true,
+          config: JSON.stringify({
+            endpoint: "replicate/api",
+            hourlyLimit: 20,
+            dailyLimit: 50
+          })
         },
         {
           name: "Google Colab",
-          endpoint: "googlecolab/jupyter",
-          status: "active",
-          hourlyLimit: 10,
-          dailyLimit: 30
+          isActive: true,
+          config: JSON.stringify({
+            endpoint: "googlecolab/jupyter", 
+            hourlyLimit: 10,
+            dailyLimit: 30
+          })
         }
       ];
       
       for (const provider of providers) {
         await this.createAiProvider({
           name: provider.name,
-          endpoint: provider.endpoint,
-          status: provider.status,
-          hourlyLimit: provider.hourlyLimit,
-          dailyLimit: provider.dailyLimit
+          isActive: provider.isActive,
+          config: provider.config
         });
       }
     }
@@ -122,7 +130,7 @@ export class DatabaseStorage implements IStorage {
     return this.updateUser(id, { 
       stripeCustomerId: info.customerId, 
       stripeSubscriptionId: info.subscriptionId,
-      plan: 'pro' // Upgrade plan when subscription is added
+      subscriptionTier: 'pro' // Upgrade plan when subscription is added
     });
   }
 
@@ -148,39 +156,14 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(contents.userId, userId),
         eq(contents.status, 'scheduled'),
-        gt(contents.scheduledAt, now)
+        gt(contents.scheduledDate, now)
       ))
-      .orderBy(contents.scheduledAt);
+      .orderBy(contents.scheduledDate);
   }
 
   async createContent(insertContent: InsertContent): Promise<Content> {
     try {
-      // Convert mediaUrls to proper format for database
       const preparedContent = { ...insertContent };
-      
-      // Handle arrays properly for JSON columns
-      if (preparedContent.mediaUrls) {
-        // Make sure it's an array even if it comes as a string
-        if (typeof preparedContent.mediaUrls === 'string') {
-          try {
-            preparedContent.mediaUrls = JSON.parse(preparedContent.mediaUrls as string);
-          } catch (e) {
-            preparedContent.mediaUrls = [(preparedContent.mediaUrls as string)];
-          }
-        }
-      }
-      
-      if (preparedContent.platforms) {
-        // Make sure it's an array even if it comes as a string
-        if (typeof preparedContent.platforms === 'string') {
-          try {
-            preparedContent.platforms = JSON.parse(preparedContent.platforms as string);
-          } catch (e) {
-            preparedContent.platforms = [(preparedContent.platforms as string)];
-          }
-        }
-      }
-      
       const [content] = await db.insert(contents).values(preparedContent).returning();
       return content;
     } catch (error) {
@@ -219,7 +202,7 @@ export class DatabaseStorage implements IStorage {
       .from(platforms)
       .where(and(
         eq(platforms.userId, userId),
-        eq(platforms.platform, platformType)
+        eq(platforms.platformType, platformType)
       ));
     return platform;
   }
@@ -245,16 +228,16 @@ export class DatabaseStorage implements IStorage {
 
   // AI Usage methods
   async getAiUsage(id: number): Promise<AiUsage | undefined> {
-    const [usage] = await db.select().from(aiUsage).where(eq(aiUsage.id, id));
+    const [usage] = await db.select().from(aiUsages).where(eq(aiUsages.id, id));
     return usage;
   }
 
   async getAiUsageByUserId(userId: number): Promise<AiUsage[]> {
     return db
       .select()
-      .from(aiUsage)
-      .where(eq(aiUsage.userId, userId))
-      .orderBy(aiUsage.timestamp);
+      .from(aiUsages)
+      .where(eq(aiUsages.userId, userId))
+      .orderBy(aiUsages.timestamp);
   }
 
   async getAiUsageByProvider(provider: string): Promise<AiUsage[]> {
@@ -264,15 +247,15 @@ export class DatabaseStorage implements IStorage {
     
     return db
       .select()
-      .from(aiUsage)
+      .from(aiUsages)
       .where(and(
-        eq(aiUsage.provider, provider),
-        gt(aiUsage.timestamp, dayAgo)
+        eq(aiUsages.provider, provider),
+        gt(aiUsages.timestamp, dayAgo)
       ));
   }
 
   async createAiUsage(insertUsage: InsertAiUsage): Promise<AiUsage> {
-    const [usage] = await db.insert(aiUsage).values(insertUsage).returning();
+    const [usage] = await db.insert(aiUsages).values(insertUsage).returning();
     
     // Also increment the provider usage
     const provider = await this.getAiProviderByName(insertUsage.provider);
@@ -298,7 +281,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(aiProviders)
-      .where(eq(aiProviders.status, 'active'))
+      .where(eq(aiProviders.isActive, true))
       .orderBy(aiProviders.name);
   }
 
@@ -323,8 +306,8 @@ export class DatabaseStorage implements IStorage {
     const [updatedProvider] = await db
       .update(aiProviders)
       .set({ 
-        usageCount: provider.usageCount + 1,
-        lastUsed: new Date()
+        usageCount: (provider.usageCount || 0) + 1,
+        updatedAt: new Date()
       })
       .where(eq(aiProviders.id, id))
       .returning();
